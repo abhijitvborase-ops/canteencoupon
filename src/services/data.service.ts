@@ -6,7 +6,14 @@ import { EmailService } from './email.service';
 import { Contractor } from '../models/contractor.model';
 import { DailyMenu } from '../models/menu.model';
 
-import { Firestore, doc, getDoc, setDoc } from '@angular/fire/firestore';
+import {
+  Firestore,
+  doc,
+  setDoc,
+  collection,
+  getDocs,
+  deleteDoc,
+} from '@angular/fire/firestore';
 
 @Injectable({
   providedIn: 'root',
@@ -23,8 +30,15 @@ export class DataService {
   private emailService = inject(EmailService);
   private firestore = inject(Firestore);
 
-  // Firestore document reference (single doc storing all app data)
-  private readonly dataDocRef = doc(this.firestore, 'canteenData', 'main');
+  // Firestore collections (सगळं आता collections मध्ये)
+  private readonly employeesCol = collection(this.firestore, 'employees');
+  private readonly couponsCol = collection(this.firestore, 'coupons');
+  private readonly contractorsCol = collection(this.firestore, 'contractors');
+  private readonly menusCol = collection(this.firestore, 'menus');
+  private readonly notificationsCol = collection(
+    this.firestore,
+    'notifications'
+  );
 
   // Public readonly signals
   employees = this._employees.asReadonly();
@@ -47,7 +61,8 @@ export class DataService {
 
   todaysIssuedCoupons = computed(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    return this._coupons().filter((c) => c.dateIssued.startsWith(todayStr)).length;
+    return this._coupons().filter((c) => c.dateIssued.startsWith(todayStr))
+      .length;
   });
 
   todaysRedeemedCoupons = computed(() => {
@@ -65,6 +80,7 @@ export class DataService {
   // =========================
   // 🔧 Helper: remove undefined (Firestore ला undefined चालत नाही)
   // =========================
+
   private removeUndefined(obj: any): any {
     if (Array.isArray(obj)) {
       return obj.map((item) => this.removeUndefined(item));
@@ -73,7 +89,7 @@ export class DataService {
       const cleaned: any = {};
       for (const key of Object.keys(obj)) {
         const value = obj[key];
-        if (value === undefined) continue; // undefined skip
+        if (value === undefined) continue;
         cleaned[key] = this.removeUndefined(value);
       }
       return cleaned;
@@ -87,66 +103,217 @@ export class DataService {
 
   private async loadFromFirestore() {
     try {
-      // 1) Browser offline असेल तर Firestore ला callच करू नको
+      // Browser offline असेल तर Firestore ला callच करू नको
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         console.warn('Firestore: browser offline आहे, local seed data वापरत आहे');
         this.seedData();
         return;
       }
-  
-      const snap = await getDoc(this.dataDocRef);
-  
-      if (snap.exists()) {
-        const data = snap.data() as {
-          employees?: Employee[];
-          coupons?: Coupon[];
-          notifications?: AppNotification[];
-          contractors?: Contractor[];
-          menus?: DailyMenu[];
-        };
-  
-        this._employees.set(data.employees ?? []);
-        this._coupons.set(data.coupons ?? []);
-        this._notifications.set(data.notifications ?? []);
-        this._contractors.set(data.contractors ?? []);
-        this._menus.set(data.menus ?? []);
-      } else {
-        // First time: seed + save
+
+      // सगळ्या collections एकत्र fetch
+      const [
+        empSnap,
+        couponSnap,
+        contractorSnap,
+        menuSnap,
+        notificationSnap,
+      ] = await Promise.all([
+        getDocs(this.employeesCol),
+        getDocs(this.couponsCol),
+        getDocs(this.contractorsCol),
+        getDocs(this.menusCol),
+        getDocs(this.notificationsCol),
+      ]);
+
+      const employees: Employee[] = empSnap.docs.map(
+        (d) => d.data() as Employee
+      );
+      const coupons: Coupon[] = couponSnap.docs.map(
+        (d) => d.data() as Coupon
+      );
+      const contractors: Contractor[] = contractorSnap.docs.map(
+        (d) => d.data() as Contractor
+      );
+      const menus: DailyMenu[] = menuSnap.docs.map(
+        (d) => d.data() as DailyMenu
+      );
+      const notifications: AppNotification[] = notificationSnap.docs.map(
+        (d) => d.data() as AppNotification
+      );
+
+      const isFirstTime =
+        employees.length === 0 &&
+        coupons.length === 0 &&
+        contractors.length === 0 &&
+        menus.length === 0 &&
+        notifications.length === 0;
+
+      if (isFirstTime) {
+        // First time: local seed + Firestore sync
         this.seedData();
-        await this.saveToFirestore();
+        await Promise.all([
+          this.syncAllEmployeesToFirestore(),
+          this.syncAllCouponsToFirestore(),
+          this.syncAllContractorsToFirestore(),
+          this.syncAllMenusToFirestore(),
+          this.syncAllNotificationsToFirestore(),
+        ]);
+      } else {
+        // Firestore मधून डेटा load
+        this._employees.set(employees);
+        this._coupons.set(coupons);
+        this._contractors.set(contractors);
+        this._menus.set(menus);
+        this._notifications.set(notifications);
       }
     } catch (err: any) {
-      // 2) Firestore ने "client is offline" / "unavailable" दिलं तर error नको, फक्त seed
       const msg = String(err?.message ?? '');
       const code = err?.code ?? '';
-  
+
       if (code === 'unavailable' || msg.includes('offline')) {
         console.warn('Firestore offline/unavailable, local seed data वापरत आहे');
         this.seedData();
         return;
       }
-  
+
       console.error('Error loading data from Firestore:', err);
       this.seedData();
     }
-  }  
+  }
 
-  private async saveToFirestore() {
+  // संपूर्ण employees collection sync करणे
+  private async syncAllEmployeesToFirestore() {
     try {
-      const payload = {
-        employees: this._employees(),
-        coupons: this._coupons(),
-        notifications: this._notifications(),
-        contractors: this._contractors(),
-        menus: this._menus(),
-      };
+      const snap = await getDocs(this.employeesCol);
+      const existingIds = new Set(snap.docs.map((d) => d.id));
 
-      // 🔥 इथे undefined साफ करून Firestore ला पाठवत आहोत
-      const cleanedPayload = this.removeUndefined(payload);
+      const employees = this._employees();
+      const ops: Promise<any>[] = [];
 
-      await setDoc(this.dataDocRef, cleanedPayload, { merge: true });
+      for (const emp of employees) {
+        const id = String(emp.id);
+        existingIds.delete(id);
+        const ref = doc(this.employeesCol, id);
+        ops.push(setDoc(ref, this.removeUndefined(emp)));
+      }
+
+      // जे ids local मध्ये नाहीत, ते delete
+      existingIds.forEach((id) => {
+        const ref = doc(this.employeesCol, id);
+        ops.push(deleteDoc(ref));
+      });
+
+      await Promise.all(ops);
     } catch (err) {
-      console.error('Error saving data to Firestore:', err);
+      console.error('Error syncing employees collection:', err);
+    }
+  }
+
+  // संपूर्ण coupons collection sync करणे
+  private async syncAllCouponsToFirestore() {
+    try {
+      const snap = await getDocs(this.couponsCol);
+      const existingIds = new Set(snap.docs.map((d) => d.id));
+
+      const coupons = this._coupons();
+      const ops: Promise<any>[] = [];
+
+      for (const c of coupons) {
+        const id = c.couponId;
+        existingIds.delete(id);
+        const ref = doc(this.couponsCol, id);
+        ops.push(setDoc(ref, this.removeUndefined(c)));
+      }
+
+      existingIds.forEach((id) => {
+        const ref = doc(this.couponsCol, id);
+        ops.push(deleteDoc(ref));
+      });
+
+      await Promise.all(ops);
+    } catch (err) {
+      console.error('Error syncing coupons collection:', err);
+    }
+  }
+
+  // संपूर्ण contractors collection sync करणे
+  private async syncAllContractorsToFirestore() {
+    try {
+      const snap = await getDocs(this.contractorsCol);
+      const existingIds = new Set(snap.docs.map((d) => d.id));
+
+      const contractors = this._contractors();
+      const ops: Promise<any>[] = [];
+
+      for (const c of contractors) {
+        const id = String(c.id);
+        existingIds.delete(id);
+        const ref = doc(this.contractorsCol, id);
+        ops.push(setDoc(ref, this.removeUndefined(c)));
+      }
+
+      existingIds.forEach((id) => {
+        const ref = doc(this.contractorsCol, id);
+        ops.push(deleteDoc(ref));
+      });
+
+      await Promise.all(ops);
+    } catch (err) {
+      console.error('Error syncing contractors collection:', err);
+    }
+  }
+
+  // संपूर्ण menus collection sync करणे
+  private async syncAllMenusToFirestore() {
+    try {
+      const snap = await getDocs(this.menusCol);
+      const existingIds = new Set(snap.docs.map((d) => d.id));
+
+      const menus = this._menus();
+      const ops: Promise<any>[] = [];
+
+      for (const m of menus) {
+        const id = m.id;
+        existingIds.delete(id);
+        const ref = doc(this.menusCol, id);
+        ops.push(setDoc(ref, this.removeUndefined(m)));
+      }
+
+      existingIds.forEach((id) => {
+        const ref = doc(this.menusCol, id);
+        ops.push(deleteDoc(ref));
+      });
+
+      await Promise.all(ops);
+    } catch (err) {
+      console.error('Error syncing menus collection:', err);
+    }
+  }
+
+  // संपूर्ण notifications collection sync करणे
+  private async syncAllNotificationsToFirestore() {
+    try {
+      const snap = await getDocs(this.notificationsCol);
+      const existingIds = new Set(snap.docs.map((d) => d.id));
+
+      const notifs = this._notifications();
+      const ops: Promise<any>[] = [];
+
+      for (const n of notifs) {
+        const id = n.id;
+        existingIds.delete(id);
+        const ref = doc(this.notificationsCol, id);
+        ops.push(setDoc(ref, this.removeUndefined(n)));
+      }
+
+      existingIds.forEach((id) => {
+        const ref = doc(this.notificationsCol, id);
+        ops.push(deleteDoc(ref));
+      });
+
+      await Promise.all(ops);
+    } catch (err) {
+      console.error('Error syncing notifications collection:', err);
     }
   }
 
@@ -236,22 +403,25 @@ export class DataService {
 
   addEmployee(employeeData: Omit<Employee, 'id' | 'status'>): Employee {
     const newId =
-      this._employees().reduce((maxId, employee) => Math.max(employee.id, maxId), 0) + 1;
+      this._employees().reduce((maxId, employee) => Math.max(employee.id, maxId), 0) +
+      1;
     const newEmployee: Employee = {
       ...employeeData,
       id: newId,
       status: 'active',
     };
     this._employees.update((employees) => [...employees, newEmployee]);
-    this.saveToFirestore();
+    this.syncAllEmployeesToFirestore();
     return newEmployee;
   }
 
   updateEmployee(updatedEmployeeData: Employee): void {
     this._employees.update((employees) =>
-      employees.map((emp) => (emp.id === updatedEmployeeData.id ? updatedEmployeeData : emp))
+      employees.map((emp) =>
+        emp.id === updatedEmployeeData.id ? updatedEmployeeData : emp
+      )
     );
-    this.saveToFirestore();
+    this.syncAllEmployeesToFirestore();
   }
 
   changePassword(employeeId: number, newPassword: string): void {
@@ -260,7 +430,7 @@ export class DataService {
         emp.id === employeeId ? { ...emp, password: newPassword } : emp
       )
     );
-    this.saveToFirestore();
+    this.syncAllEmployeesToFirestore();
   }
 
   deleteEmployee(employeeId: number): void {
@@ -276,7 +446,10 @@ export class DataService {
     this._notifications.update((notifications) =>
       notifications.filter((n) => n.employeeId !== employeeId)
     );
-    this.saveToFirestore();
+
+    this.syncAllEmployeesToFirestore();
+    this.syncAllCouponsToFirestore();
+    this.syncAllNotificationsToFirestore();
   }
 
   toggleEmployeeStatus(employeeId: number): void {
@@ -284,13 +457,12 @@ export class DataService {
       employees.map((emp) => {
         if (emp.id === employeeId) {
           const newStatus = emp.status === 'active' ? 'deactivated' : 'active';
-          // NOTE: Coupon deletion logic is removed to preserve them.
           return { ...emp, status: newStatus };
         }
         return emp;
       })
     );
-    this.saveToFirestore();
+    this.syncAllEmployeesToFirestore();
   }
 
   // =========================
@@ -312,15 +484,17 @@ export class DataService {
       id: newId,
     };
     this._contractors.update((contractors) => [...contractors, newContractor]);
-    this.saveToFirestore();
+    this.syncAllContractorsToFirestore();
     return newContractor;
   }
 
   updateContractor(updatedContractorData: Contractor): void {
     this._contractors.update((contractors) =>
-      contractors.map((c) => (c.id === updatedContractorData.id ? updatedContractorData : c))
+      contractors.map((c) =>
+        c.id === updatedContractorData.id ? updatedContractorData : c
+      )
     );
-    this.saveToFirestore();
+    this.syncAllContractorsToFirestore();
   }
 
   changeContractorPassword(contractorId: number, newPassword: string): void {
@@ -329,19 +503,20 @@ export class DataService {
         c.id === contractorId ? { ...c, password: newPassword } : c
       )
     );
-    this.saveToFirestore();
+    this.syncAllContractorsToFirestore();
   }
 
   deleteContractor(contractorId: number): void {
-    const contractorToDelete = this._contractors().find((c) => c.id === contractorId);
+    const contractorToDelete = this._contractors().find(
+      (c) => c.id === contractorId
+    );
     if (!contractorToDelete) return;
 
     // Un-assign contractor from employees
     this._employees.update((employees) =>
       employees.map((emp) => {
         if (emp.contractor === contractorToDelete.businessName) {
-          // undefined ऐवजी null ठेवतो -> Firestore friendly
-          return { ...emp, contractor: null };
+          return { ...emp, contractor: undefined };
         }
         return emp;
       })
@@ -357,7 +532,9 @@ export class DataService {
       contractors.filter((c) => c.id !== contractorId)
     );
 
-    this.saveToFirestore();
+    this.syncAllEmployeesToFirestore();
+    this.syncAllCouponsToFirestore();
+    this.syncAllContractorsToFirestore();
   }
 
   // =========================
@@ -380,7 +557,7 @@ export class DataService {
     this._coupons.update((coupons) =>
       coupons.filter((c) => c.couponId !== couponId)
     );
-    this.saveToFirestore();
+    this.syncAllCouponsToFirestore();
     return { success: true, message: `Coupon ${couponId} removed successfully.` };
   }
 
@@ -433,7 +610,9 @@ export class DataService {
       return false;
     });
 
-    const hasUnredeemedCoupons = monthlyCoupons.some((c) => c.status === 'issued');
+    const hasUnredeemedCoupons = monthlyCoupons.some(
+      (c) => c.status === 'issued'
+    );
 
     // If there are any unredeemed coupons for the current month, block generation.
     if (hasUnredeemedCoupons) {
@@ -446,11 +625,20 @@ export class DataService {
     // If all coupons are redeemed (or none exist for the month), generate a new full batch.
     const countToGenerate = limit;
 
-    const newCoupons = this.createCouponsForEmployee(employeeId, countToGenerate, couponType);
+    const newCoupons = this.createCouponsForEmployee(
+      employeeId,
+      countToGenerate,
+      couponType
+    );
     this._coupons.update((coupons) => [...coupons, ...newCoupons]);
-    this.saveToFirestore();
 
-    this.emailService.sendCouponNotification(employee, countToGenerate, couponType);
+    this.syncAllCouponsToFirestore();
+
+    this.emailService.sendCouponNotification(
+      employee,
+      countToGenerate,
+      couponType
+    );
 
     const newNotification: AppNotification = {
       id: `NTF-${Date.now()}-${Math.random()}`,
@@ -460,8 +648,11 @@ export class DataService {
       isRead: false,
       createdAt: new Date().toISOString(),
     };
-    this._notifications.update((notifications) => [newNotification, ...notifications]);
-    this.saveToFirestore();
+    this._notifications.update((notifications) => [
+      newNotification,
+      ...notifications,
+    ]);
+    this.syncAllNotificationsToFirestore();
 
     return {
       success: true,
@@ -505,7 +696,7 @@ export class DataService {
     }
 
     this._coupons.update((coupons) => [...coupons, ...newCoupons]);
-    this.saveToFirestore();
+    this.syncAllCouponsToFirestore();
 
     return {
       success: true,
@@ -540,7 +731,9 @@ export class DataService {
     }
 
     const couponsToAssign = availableCoupons.slice(0, quantity);
-    const couponIdsToAssign = new Set(couponsToAssign.map((c) => c.couponId));
+    const couponIdsToAssign = new Set(
+      couponsToAssign.map((c) => c.couponId)
+    );
 
     this._coupons.update((coupons) =>
       coupons.map((c) => {
@@ -559,9 +752,13 @@ export class DataService {
       isRead: false,
       createdAt: new Date().toISOString(),
     };
-    this._notifications.update((notifications) => [newNotification, ...notifications]);
+    this._notifications.update((notifications) => [
+      newNotification,
+      ...notifications,
+    ]);
 
-    this.saveToFirestore();
+    this.syncAllCouponsToFirestore();
+    this.syncAllNotificationsToFirestore();
 
     return {
       success: true,
@@ -573,11 +770,15 @@ export class DataService {
     this._coupons.update((coupons) =>
       coupons.map((c) =>
         c.couponId === couponId && c.status === 'issued'
-          ? { ...c, status: 'redeemed', redeemDate: new Date().toISOString() }
+          ? {
+              ...c,
+              status: 'redeemed',
+              redeemDate: new Date().toISOString(),
+            }
           : c
       )
     );
-    this.saveToFirestore();
+    this.syncAllCouponsToFirestore();
   }
 
   redeemCouponByCode(code: string): { success: boolean; message: string } {
@@ -590,7 +791,10 @@ export class DataService {
         (c) => c.redemptionCode === code && c.status === 'redeemed'
       );
       if (alreadyRedeemed) {
-        return { success: false, message: 'This coupon has already been redeemed.' };
+        return {
+          success: false,
+          message: 'This coupon has already been redeemed.',
+        };
       }
       return { success: false, message: 'Invalid coupon code.' };
     }
@@ -606,11 +810,15 @@ export class DataService {
       this._coupons.update((coupons) =>
         coupons.map((c) =>
           c.couponId === couponToRedeem.couponId
-            ? { ...c, status: 'redeemed', redeemDate: new Date().toISOString() }
+            ? {
+                ...c,
+                status: 'redeemed',
+                redeemDate: new Date().toISOString(),
+              }
             : c
         )
       );
-      this.saveToFirestore();
+      this.syncAllCouponsToFirestore();
 
       return { success: true, message: successMessage };
     }
@@ -622,7 +830,9 @@ export class DataService {
       };
     }
 
-    const employee = this._employees().find((u) => u.id === couponToRedeem.employeeId);
+    const employee = this._employees().find(
+      (u) => u.id === couponToRedeem.employeeId
+    );
 
     if (employee && employee.status === 'deactivated') {
       return {
@@ -635,11 +845,15 @@ export class DataService {
     this._coupons.update((coupons) =>
       coupons.map((c) =>
         c.couponId === couponToRedeem.couponId
-          ? { ...c, status: 'redeemed', redeemDate: new Date().toISOString() }
+          ? {
+              ...c,
+              status: 'redeemed',
+              redeemDate: new Date().toISOString(),
+            }
           : c
       )
     );
-    this.saveToFirestore();
+    this.syncAllCouponsToFirestore();
 
     return {
       success: true,
@@ -693,7 +907,7 @@ export class DataService {
 
     if (removedCount > 0) {
       this._coupons.set(couponsAfter);
-      this.saveToFirestore();
+      this.syncAllCouponsToFirestore();
       return {
         success: true,
         message: `Successfully removed the last batch of ${removedCount} coupon(s).`,
@@ -752,7 +966,7 @@ export class DataService {
     };
 
     this._coupons.update((coupons) => [...coupons, guestCoupon]);
-    this.saveToFirestore();
+    this.syncAllCouponsToFirestore();
 
     return {
       success: true,
@@ -767,9 +981,11 @@ export class DataService {
 
   markNotificationAsRead(notificationId: string) {
     this._notifications.update((notifications) =>
-      notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
+      notifications.map((n) =>
+        n.id === notificationId ? { ...n, isRead: true } : n
+      )
     );
-    this.saveToFirestore();
+    this.syncAllNotificationsToFirestore();
   }
 
   markAllNotificationsAsRead(employeeId: number) {
@@ -778,7 +994,7 @@ export class DataService {
         n.employeeId === employeeId ? { ...n, isRead: true } : n
       )
     );
-    this.saveToFirestore();
+    this.syncAllNotificationsToFirestore();
   }
 
   // =========================
@@ -805,6 +1021,6 @@ export class DataService {
       };
       this._menus.update((menus) => [...menus, newMenu]);
     }
-    this.saveToFirestore();
+    this.syncAllMenusToFirestore();
   }
 }

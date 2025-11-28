@@ -1,8 +1,3 @@
-
-
-
-
-
 export interface Coupon {
   couponId: string;
   employeeId?: number;
