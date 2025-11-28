@@ -12,6 +12,9 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "allowedCommonJsDependencies": [
+      "qrcode"
+            ],
             "outputPath": {
               "base": "./dist",
               "browser": "."
