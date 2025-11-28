@@ -63,6 +63,25 @@ export class DataService {
   }
 
   // =========================
+  // 🔧 Helper: remove undefined (Firestore ला undefined चालत नाही)
+  // =========================
+  private removeUndefined(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.removeUndefined(item));
+    }
+    if (obj !== null && typeof obj === 'object') {
+      const cleaned: any = {};
+      for (const key of Object.keys(obj)) {
+        const value = obj[key];
+        if (value === undefined) continue; // undefined skip
+        cleaned[key] = this.removeUndefined(value);
+      }
+      return cleaned;
+    }
+    return obj;
+  }
+
+  // =========================
   // 🔥 Firestore helpers
   // =========================
 
@@ -121,7 +140,11 @@ export class DataService {
         contractors: this._contractors(),
         menus: this._menus(),
       };
-      await setDoc(this.dataDocRef, payload, { merge: true });
+
+      // 🔥 इथे undefined साफ करून Firestore ला पाठवत आहोत
+      const cleanedPayload = this.removeUndefined(payload);
+
+      await setDoc(this.dataDocRef, cleanedPayload, { merge: true });
     } catch (err) {
       console.error('Error saving data to Firestore:', err);
     }
@@ -317,7 +340,8 @@ export class DataService {
     this._employees.update((employees) =>
       employees.map((emp) => {
         if (emp.contractor === contractorToDelete.businessName) {
-          return { ...emp, contractor: undefined };
+          // undefined ऐवजी null ठेवतो -> Firestore friendly
+          return { ...emp, contractor: null };
         }
         return emp;
       })
