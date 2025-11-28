@@ -1,18 +1,19 @@
-import '@angular/compiler';
+import 'zone.js';  // Angular साठी आवश्यक
+
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideZonelessChangeDetection } from '@angular/core';
-import { AppComponent } from './src/app.component';
-import { importProvidersFrom } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms'; 
-import { provideRouter, withHashLocation, withInMemoryScrolling } from '@angular/router';
-import { routes } from './src/app.routes';
+import { provideRouter } from '@angular/router';
+
+import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
+import { provideFirestore, getFirestore } from '@angular/fire/firestore';
+
+import { AppComponent } from './app/app.component';
+import { routes } from './app/app.routes';
+import { environment } from './environments/environment';
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideZonelessChangeDetection(),
-    importProvidersFrom(ReactiveFormsModule),
-    provideRouter(routes, withHashLocation(), withInMemoryScrolling({anchorScrolling: 'enabled'}))
-  ],
-}).catch((err) => console.error(err));
-
-// AI Studio always uses an `index.tsx` file for all project types.
+    provideRouter(routes),
+    provideFirebaseApp(() => initializeApp(environment.firebase)),
+    provideFirestore(() => getFirestore())
+  ]
+}).catch(err => console.error(err));

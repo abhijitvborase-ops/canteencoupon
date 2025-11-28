@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { GoogleGenAI } from '@google/genai';
 import { Employee } from '../models/user.model';
 import { Coupon } from '../models/coupon.model';
+import { API_KEY } from './api.key'; // Import the API key
 
 @Injectable({
   providedIn: 'root',
@@ -10,8 +11,7 @@ export class GeminiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    // IMPORTANT: The API key is sourced from environment variables for security.
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    this.ai = new GoogleGenAI({ apiKey: API_KEY });
   }
 
   async generateInsights(question: string, employees: Employee[], coupons: Coupon[]): Promise<string> {
