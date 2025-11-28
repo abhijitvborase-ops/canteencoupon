@@ -1,23 +1,25 @@
 import { Injectable } from '@angular/core';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Employee } from '../models/user.model';
 import { Coupon } from '../models/coupon.model';
-import { API_KEY } from './api.key'; // Import the API key
+import { API_KEY } from './api.key';
 
 @Injectable({
   providedIn: 'root',
 })
 export class GeminiService {
-  private ai: GoogleGenAI;
+  private genAI: GoogleGenerativeAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: API_KEY });
+    this.genAI = new GoogleGenerativeAI(API_KEY);
   }
 
-  async generateInsights(question: string, employees: Employee[], coupons: Coupon[]): Promise<string> {
-    
-    // 1. Prepare and simplify the data to be sent to the AI.
-    // This reduces token count and focuses the AI on relevant information.
+  async generateInsights(
+    question: string,
+    employees: Employee[],
+    coupons: Coupon[]
+  ): Promise<string> {
+
     const simplifiedEmployees = employees.map(emp => ({
       id: emp.id,
       role: emp.role,
@@ -29,7 +31,7 @@ export class GeminiService {
       employeeId: c.employeeId,
       couponType: c.couponType,
       status: c.status,
-      dateIssued: c.dateIssued.split('T')[0], // Keep only the date part
+      dateIssued: c.dateIssued?.split('T')[0] || null,
       redeemDate: c.redeemDate ? c.redeemDate.split('T')[0] : null,
     }));
 
@@ -37,37 +39,33 @@ export class GeminiService {
       employees: simplifiedEmployees,
       coupons: simplifiedCoupons,
     };
-    const jsonData = JSON.stringify(dataForAI);
 
-    // 2. Construct a detailed prompt for the AI.
-    const model = 'gemini-2.5-flash';
     const prompt = `
-      You are an AI assistant for a Canteen Management System.
-      Analyze the provided JSON data to answer the user's question about coupon usage.
-      The current date is ${new Date().toISOString().split('T')[0]}.
-      The JSON data contains two arrays: 'employees' and 'coupons'.
-      - The 'employees' array links employee IDs to their roles, departments, and contractors.
-      - The 'coupons' array contains records of every coupon, including its type, status, issue date, and redemption date.
-      
-      Provide a clear, concise, and helpful answer. Use bullet points for lists if it makes the answer clearer.
+You are an AI assistant for a Canteen Management System.
 
-      JSON Data:
-      ${jsonData}
+Analyze the given JSON data to answer the user's question.
+Be helpful and use bullet points if needed.
 
-      User's Question:
-      "${question}"
-    `;
+Current date: ${new Date().toISOString().split('T')[0]}
 
-    // 3. Call the Gemini API and handle the response.
+JSON Data:
+${JSON.stringify(dataForAI)}
+
+User Question:
+"${question}"
+`;
+
     try {
-      const response = await this.ai.models.generateContent({
-        model: model,
-        contents: prompt
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-pro',
       });
-      return response.text;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
     } catch (error) {
-      console.error('Gemini API call failed:', error);
-      throw new Error('Failed to get insights from the AI. The service may be temporarily unavailable.');
+      console.error('Gemini API Error:', error);
+      return '⚠️ Gemini service temporarily unavailable. Try later.';
     }
   }
 }
