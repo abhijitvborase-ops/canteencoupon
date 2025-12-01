@@ -19,9 +19,14 @@ export class HeaderComponent {
   private dataService = inject(DataService);
   private elementRef = inject(ElementRef);
   
+  // current user signal
   currentUser = this.authService.currentUser;
-  logout = output<void>();
 
+  // outputs
+  logout = output<void>();
+  menuToggle = output<void>();   // 👈 हे नवीन – mobile sidebar toggle साठी
+
+  // state signals
   isNotificationPanelOpen = signal(false);
   isUserMenuOpen = signal(false);
 
@@ -39,10 +44,21 @@ export class HeaderComponent {
   });
 
   onDocumentClick(event: MouseEvent) {
-    if (this.isNotificationPanelOpen() && !this.elementRef.nativeElement.querySelector('.notification-panel-container')?.contains(event.target)) {
+    if (
+      this.isNotificationPanelOpen() &&
+      !this.elementRef.nativeElement
+        .querySelector('.notification-panel-container')
+        ?.contains(event.target)
+    ) {
       this.isNotificationPanelOpen.set(false);
     }
-    if (this.isUserMenuOpen() && !this.elementRef.nativeElement.querySelector('.user-menu-container')?.contains(event.target)) {
+
+    if (
+      this.isUserMenuOpen() &&
+      !this.elementRef.nativeElement
+        .querySelector('.user-menu-container')
+        ?.contains(event.target)
+    ) {
       this.isUserMenuOpen.set(false);
     }
   }
@@ -65,7 +81,7 @@ export class HeaderComponent {
 
   markAllAsRead() {
     const user = this.currentUser();
-    if(user) {
+    if (user) {
       this.dataService.markAllNotificationsAsRead(user.id);
     }
   }
