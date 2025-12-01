@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+  
+  /* सगळं content mobile सारखं दिसण्यासाठी एक wrapper */
+  .app-shell {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;   /* मध्ये आणण्यासाठी */
+  }
+  
+  /* actual screen ची मर्यादा – mobile सारखी width */
+  .app-shell-inner {
+    width: 100%;
+    max-width: 480px;          /* mobile सारखी max width */
+    padding: 16px;             /* थोडं gap */
+    box-sizing: border-box;
+  }
+  
