@@ -5,6 +5,7 @@ import { AppNotification } from '../models/notification.model';
 import { EmailService } from './email.service';
 import { Contractor } from '../models/contractor.model';
 import { DailyMenu } from '../models/menu.model';
+import { GuestCouponRequest } from '../models/guest-coupon-request.model';
 
 import {
   Firestore,
@@ -25,19 +26,21 @@ export class DataService {
   private _notifications = signal<AppNotification[]>([]);
   private _contractors = signal<Contractor[]>([]);
   private _menus = signal<DailyMenu[]>([]);
+  private _guestCouponRequests = signal<GuestCouponRequest[]>([]);
 
   // Dependencies
   private emailService = inject(EmailService);
   private firestore = inject(Firestore);
 
-  // Firestore collections (सगळं आता collections मध्ये)
+  // Firestore collections
   private readonly employeesCol = collection(this.firestore, 'employees');
   private readonly couponsCol = collection(this.firestore, 'coupons');
   private readonly contractorsCol = collection(this.firestore, 'contractors');
   private readonly menusCol = collection(this.firestore, 'menus');
-  private readonly notificationsCol = collection(
+  private readonly notificationsCol = collection(this.firestore, 'notifications');
+  private readonly guestCouponRequestsCol = collection(
     this.firestore,
-    'notifications'
+    'guestCouponRequests'
   );
 
   // Public readonly signals
@@ -46,6 +49,7 @@ export class DataService {
   notifications = this._notifications.asReadonly();
   contractors = this._contractors.asReadonly();
   menus = this._menus.asReadonly();
+  guestCouponRequests = this._guestCouponRequests.asReadonly();
 
   contractorBusinessNames = computed(() =>
     this._contractors()
@@ -78,7 +82,7 @@ export class DataService {
   }
 
   // =========================
-  // 🔧 Helper: remove undefined (Firestore ला undefined चालत नाही)
+  // 🔧 Helper: remove undefined
   // =========================
 
   private removeUndefined(obj: any): any {
@@ -117,12 +121,14 @@ export class DataService {
         contractorSnap,
         menuSnap,
         notificationSnap,
+        guestReqSnap,
       ] = await Promise.all([
         getDocs(this.employeesCol),
         getDocs(this.couponsCol),
         getDocs(this.contractorsCol),
         getDocs(this.menusCol),
         getDocs(this.notificationsCol),
+        getDocs(this.guestCouponRequestsCol),
       ]);
 
       const employees: Employee[] = empSnap.docs.map(
@@ -140,13 +146,17 @@ export class DataService {
       const notifications: AppNotification[] = notificationSnap.docs.map(
         (d) => d.data() as AppNotification
       );
+      const guestRequests: GuestCouponRequest[] = guestReqSnap.docs.map(
+        (d) => d.data() as GuestCouponRequest
+      );
 
       const isFirstTime =
         employees.length === 0 &&
         coupons.length === 0 &&
         contractors.length === 0 &&
         menus.length === 0 &&
-        notifications.length === 0;
+        notifications.length === 0 &&
+        guestRequests.length === 0;
 
       if (isFirstTime) {
         // First time: local seed + Firestore sync
@@ -157,6 +167,7 @@ export class DataService {
           this.syncAllContractorsToFirestore(),
           this.syncAllMenusToFirestore(),
           this.syncAllNotificationsToFirestore(),
+          this.syncAllGuestCouponRequestsToFirestore(),
         ]);
       } else {
         // Firestore मधून डेटा load
@@ -165,6 +176,7 @@ export class DataService {
         this._contractors.set(contractors);
         this._menus.set(menus);
         this._notifications.set(notifications);
+        this._guestCouponRequests.set(guestRequests);
       }
     } catch (err: any) {
       const msg = String(err?.message ?? '');
@@ -197,7 +209,6 @@ export class DataService {
         ops.push(setDoc(ref, this.removeUndefined(emp)));
       }
 
-      // जे ids local मध्ये नाहीत, ते delete
       existingIds.forEach((id) => {
         const ref = doc(this.employeesCol, id);
         ops.push(deleteDoc(ref));
@@ -300,7 +311,7 @@ export class DataService {
       const ops: Promise<any>[] = [];
 
       for (const n of notifs) {
-        const id = n.id;
+        const id = n.id!;
         existingIds.delete(id);
         const ref = doc(this.notificationsCol, id);
         ops.push(setDoc(ref, this.removeUndefined(n)));
@@ -314,6 +325,33 @@ export class DataService {
       await Promise.all(ops);
     } catch (err) {
       console.error('Error syncing notifications collection:', err);
+    }
+  }
+
+  // संपूर्ण guestCouponRequests collection sync करणे
+  private async syncAllGuestCouponRequestsToFirestore() {
+    try {
+      const snap = await getDocs(this.guestCouponRequestsCol);
+      const existingIds = new Set(snap.docs.map((d) => d.id));
+
+      const reqs = this._guestCouponRequests();
+      const ops: Promise<any>[] = [];
+
+      for (const r of reqs) {
+        const id = r.id!;
+        existingIds.delete(id);
+        const ref = doc(this.guestCouponRequestsCol, id);
+        ops.push(setDoc(ref, this.removeUndefined(r)));
+      }
+
+      existingIds.forEach((id) => {
+        const ref = doc(this.guestCouponRequestsCol, id);
+        ops.push(deleteDoc(ref));
+      });
+
+      await Promise.all(ops);
+    } catch (err) {
+      console.error('Error syncing guest coupon requests collection:', err);
     }
   }
 
@@ -342,6 +380,7 @@ export class DataService {
     this._coupons.set([]); // Start with no coupons
     this._notifications.set([]); // Start with no notifications
     this._menus.set([]); // Start with no menus
+    this._guestCouponRequests.set([]); // Start with no guest requests
   }
 
   // =========================
@@ -391,6 +430,18 @@ export class DataService {
       Date.now().toString(36).slice(-4).toUpperCase() +
       Math.random().toString(36).substring(2, 6).toUpperCase()
     );
+  }
+
+  private generateGuestRequestId(): string {
+    return (
+      'GREQ-' +
+      Date.now().toString(36).slice(-4).toUpperCase() +
+      Math.random().toString(36).substring(2, 6).toUpperCase()
+    );
+  }
+
+  private generateNotificationId(): string {
+    return `NTF-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   }
 
   // =========================
@@ -538,7 +589,7 @@ export class DataService {
   }
 
   // =========================
-  // Coupon methods
+  // Coupon & Guest Pass methods
   // =========================
 
   getCouponsForEmployee(employeeId: number): Coupon[] {
@@ -641,7 +692,7 @@ export class DataService {
     );
 
     const newNotification: AppNotification = {
-      id: `NTF-${Date.now()}-${Math.random()}`,
+      id: this.generateNotificationId(),
       employeeId: employeeId,
       message: `You have received ${countToGenerate} new ${couponType} coupon(s).`,
       type: 'new_coupon',
@@ -745,7 +796,7 @@ export class DataService {
     );
 
     const newNotification: AppNotification = {
-      id: `NTF-${Date.now()}-${Math.random()}`,
+      id: this.generateNotificationId(),
       employeeId: employeeId,
       message: `You have received ${quantity} new ${couponType} coupon(s) from your contractor.`,
       type: 'new_coupon',
@@ -803,7 +854,16 @@ export class DataService {
       const sharingEmployee = this._employees().find(
         (u) => u.id === couponToRedeem.sharedByEmployeeId
       );
-      const successMessage = `Guest coupon redeemed successfully (shared by ${
+
+      const guestInfo = couponToRedeem.guestName
+        ? ` for ${couponToRedeem.guestName}${
+            couponToRedeem.guestCompany
+              ? ` (${couponToRedeem.guestCompany})`
+              : ''
+          }`
+        : '';
+
+      const successMessage = `Guest coupon redeemed successfully${guestInfo} (requested by ${
         sharingEmployee?.name || 'Unknown'
       }).`;
 
@@ -922,34 +982,114 @@ export class DataService {
     }
   }
 
+  // ✅ NEW FLOW:
+  // Employee → Guest Pass Request (with guestName & guestCompany)
   generateGuestPassFromEmployeeCoupon(
     employeeId: number,
+    employeeName: string,
+    guestName: string,
+    guestCompany: string,
     couponType: Coupon['couponType']
-  ): { success: boolean; guestCoupon?: Coupon; message?: string } {
-    const GUEST_PASS_LIMIT = 5;
-    const todayStr = new Date().toISOString().split('T')[0];
+  ): { success: boolean; message: string } {
+    const trimmedGuestName = guestName.trim();
+    const trimmedGuestCompany = guestCompany.trim();
 
-    const todaysGuestPasses = this._coupons().filter(
-      (c) =>
-        c.isGuestCoupon &&
-        c.sharedByEmployeeId === employeeId &&
-        c.couponType === couponType &&
-        c.dateIssued.startsWith(todayStr)
-    ).length;
-
-    if (todaysGuestPasses >= GUEST_PASS_LIMIT) {
+    if (!trimmedGuestName || !trimmedGuestCompany) {
       return {
         success: false,
-        message: `You have reached your daily limit of ${GUEST_PASS_LIMIT} ${couponType} guest passes.`,
+        message: 'Please enter guest full name and company.',
       };
     }
 
-    let newCode: string;
+    const GUEST_PASS_DAILY_LIMIT = 5;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const todaysRequests = this._guestCouponRequests().filter(
+      (r) =>
+        r.employeeId === employeeId &&
+        r.couponType === couponType &&
+        r.requestDate.startsWith(todayStr)
+    ).length;
+
+    if (todaysRequests >= GUEST_PASS_DAILY_LIMIT) {
+      return {
+        success: false,
+        message: `You have reached your daily limit of ${GUEST_PASS_DAILY_LIMIT} ${couponType} guest pass requests.`,
+      };
+    }
+
+    const requestId = this.generateGuestRequestId();
+    const newRequest: GuestCouponRequest = {
+      id: requestId,
+      employeeId,
+      employeeName,
+      guestName: trimmedGuestName,
+      guestCompany: trimmedGuestCompany,
+      couponType,
+      status: 'pending',
+      requestDate: new Date().toISOString(),
+    };
+
+    // Add to local state
+    this._guestCouponRequests.update((reqs) => [newRequest, ...reqs]);
+
+    // Notify all admins
+    const admins = this._employees().filter((e) => e.role === 'admin');
+    const nowIso = new Date().toISOString();
+
+    const newNotifications: AppNotification[] = admins.map((admin) => ({
+      id: this.generateNotificationId(),
+      employeeId: admin.id,
+      message: `${employeeName} requested a ${couponType} guest pass for ${trimmedGuestName} (${trimmedGuestCompany}).`,
+      type: 'guest_pass_request',
+      isRead: false,
+      createdAt: nowIso,
+      relatedRequestId: requestId,
+      requesterEmployeeId: employeeId,
+    }));
+
+    this._notifications.update((list) => [...newNotifications, ...list]);
+
+    // Sync to Firestore
+    this.syncAllGuestCouponRequestsToFirestore();
+    this.syncAllNotificationsToFirestore();
+
+    return {
+      success: true,
+      message:
+        'Guest pass request has been sent to admin for approval. You will be notified once it is processed.',
+    };
+  }
+
+  // Admin helper: get pending & processed guest requests
+  getPendingGuestCouponRequests(): GuestCouponRequest[] {
+    return this._guestCouponRequests().filter((r) => r.status === 'pending');
+  }
+
+  getProcessedGuestCouponRequests(): GuestCouponRequest[] {
+    return this._guestCouponRequests().filter((r) => r.status !== 'pending');
+  }
+
+  // Admin: Approve guest pass → generate actual guest coupon
+  approveGuestCouponRequest(
+    requestId: string,
+    adminId: number
+  ): { success: boolean; message: string } {
+    const request = this._guestCouponRequests().find((r) => r.id === requestId);
+    if (!request) {
+      return { success: false, message: 'Guest pass request not found.' };
+    }
+    if (request.status !== 'pending') {
+      return { success: false, message: 'This request is already processed.' };
+    }
+
+    // Generate unique coupon code
     const existingCodes = new Set(
       this._coupons()
         .filter((c) => c.status === 'issued')
         .map((c) => c.redemptionCode)
     );
+    let newCode: string;
     do {
       newCode = this.generateRedemptionCode();
     } while (existingCodes.has(newCode));
@@ -960,18 +1100,105 @@ export class DataService {
       status: 'issued',
       redeemDate: null,
       redemptionCode: newCode,
-      couponType: couponType,
+      couponType: request.couponType,
       isGuestCoupon: true,
-      sharedByEmployeeId: employeeId,
+      sharedByEmployeeId: request.employeeId,
+      guestName: request.guestName,
+      guestCompany: request.guestCompany,
     };
 
-    this._coupons.update((coupons) => [...coupons, guestCoupon]);
+    // Update coupons list
+    this._coupons.update((coupons) => [guestCoupon, ...coupons]);
+
+    // Update request
+    this._guestCouponRequests.update((reqs) =>
+      reqs.map((r) =>
+        r.id === requestId
+          ? {
+              ...r,
+              status: 'approved',
+              decisionDate: new Date().toISOString(),
+              adminId,
+              generatedCouponId: guestCoupon.couponId,
+            }
+          : r
+      )
+    );
+
+    // Notify requesting employee
+    const approvalNotif: AppNotification = {
+      id: this.generateNotificationId(),
+      employeeId: request.employeeId,
+      message: `Your guest pass request for ${request.guestName} (${request.guestCompany}) for ${request.couponType} has been approved. Coupon code: ${guestCoupon.redemptionCode}.`,
+      type: 'system',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      relatedRequestId: requestId,
+      relatedCouponId: guestCoupon.couponId,
+      requesterEmployeeId: request.employeeId,
+    };
+
+    this._notifications.update((list) => [approvalNotif, ...list]);
+
     this.syncAllCouponsToFirestore();
+    this.syncAllGuestCouponRequestsToFirestore();
+    this.syncAllNotificationsToFirestore();
 
     return {
       success: true,
-      guestCoupon: guestCoupon,
-      message: 'Guest pass generated successfully.',
+      message: 'Guest pass request approved and guest coupon generated.',
+    };
+  }
+
+  // Admin: Reject guest pass request
+  rejectGuestCouponRequest(
+    requestId: string,
+    adminId: number,
+    reason?: string
+  ): { success: boolean; message: string } {
+    const request = this._guestCouponRequests().find((r) => r.id === requestId);
+    if (!request) {
+      return { success: false, message: 'Guest pass request not found.' };
+    }
+    if (request.status !== 'pending') {
+      return { success: false, message: 'This request is already processed.' };
+    }
+
+    this._guestCouponRequests.update((reqs) =>
+      reqs.map((r) =>
+        r.id === requestId
+          ? {
+              ...r,
+              status: 'rejected',
+              decisionDate: new Date().toISOString(),
+              adminId,
+              rejectionReason: reason,
+            }
+          : r
+      )
+    );
+
+    const rejectionNotif: AppNotification = {
+      id: this.generateNotificationId(),
+      employeeId: request.employeeId,
+      message:
+        `Your guest pass request for ${request.guestName} (${request.guestCompany}) for ${request.couponType} was rejected.` +
+        (reason ? ` Reason: ${reason}` : ''),
+      type: 'system',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      relatedRequestId: requestId,
+      requesterEmployeeId: request.employeeId,
+    };
+
+    this._notifications.update((list) => [rejectionNotif, ...list]);
+
+    this.syncAllGuestCouponRequestsToFirestore();
+    this.syncAllNotificationsToFirestore();
+
+    return {
+      success: true,
+      message: 'Guest pass request rejected.',
     };
   }
 
