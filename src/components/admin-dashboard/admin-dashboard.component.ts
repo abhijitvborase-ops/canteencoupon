@@ -94,23 +94,23 @@ export class AdminDashboardComponent {
       .catch((err: any) => console.error('Unable to start QR scanner', err));
   }
   
-  handleRedeemCoupon() {
+  async handleRedeemCoupon() {
     if (this.redeemCouponForm.valid) {
       const code = this.redeemCouponForm.value.code!;
-      const result = this.dataService.redeemCouponByCode(code);
-
+  
+      const result = await this.dataService.redeemCouponByCode(code);
+  
       if (result.success) {
         this.redeemStatusMessage.set({ type: 'success', text: result.message });
       } else {
         this.redeemStatusMessage.set({ type: 'error', text: result.message });
       }
-
+  
       this.redeemCouponForm.reset();
-      
-      // Clear the message after a few seconds
+  
       setTimeout(() => this.redeemStatusMessage.set(null), 7000);
     }
-  }
+  }  
 
   async handleGetAiInsights() {
     if (this.aiQueryForm.invalid) return;

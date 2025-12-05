@@ -14,6 +14,8 @@ import {
   collection,
   getDocs,
   deleteDoc,
+  query,
+  where,
 } from '@angular/fire/firestore';
 
 @Injectable({
@@ -134,9 +136,27 @@ export class DataService {
       const employees: Employee[] = empSnap.docs.map(
         (d) => d.data() as Employee
       );
-      const coupons: Coupon[] = couponSnap.docs.map(
-        (d) => d.data() as Coupon
-      );
+
+      // ⚠️ Coupons मध्ये काही fields Timestamp असू शकतात (device bridge मुळे)
+      const coupons: Coupon[] = couponSnap.docs.map((d) => {
+        const data: any = d.data();
+        const dateIssued =
+          data.dateIssued && data.dateIssued.toDate
+            ? data.dateIssued.toDate().toISOString()
+            : data.dateIssued;
+
+        const redeemDate =
+          data.redeemDate && data.redeemDate.toDate
+            ? data.redeemDate.toDate().toISOString()
+            : data.redeemDate ?? null;
+
+        return {
+          ...data,
+          dateIssued,
+          redeemDate,
+        } as Coupon;
+      });
+
       const contractors: Contractor[] = contractorSnap.docs.map(
         (d) => d.data() as Contractor
       );
@@ -386,10 +406,24 @@ export class DataService {
   // =========================
   // Utility methods
   // =========================
-
+  // couponType वरून time-slot number ठरवणे
+  // 0 = Breakfast (8–10)
+  // 1 = Lunch/Dinner (11:30–14)
+  // TODO: पुढे Snacks / Dinner वेगळं करायचं असेल तर 2,3 वापर
+  private getSlotFromCouponType(couponType: Coupon['couponType']): number {
+    switch (couponType) {
+      case 'Breakfast': // 8–10
+        return 0;
+      case 'Lunch/Dinner': // 11:30–14
+        return 1;
+      default:
+        return 0; // default Breakfast ला
+    }
+  }
   private generateRedemptionCode(): string {
     // Generate a 4-digit numeric code as a string
     return Math.floor(1000 + Math.random() * 9000).toString();
+  
   }
 
   private createCouponsForEmployee(
@@ -403,7 +437,7 @@ export class DataService {
         .filter((c) => c.status === 'issued')
         .map((c) => c.redemptionCode)
     );
-
+    const slot = this.getSlotFromCouponType(couponType);
     for (let i = 0; i < count; i++) {
       let newCode: string;
       do {
@@ -419,6 +453,7 @@ export class DataService {
         redeemDate: null,
         redemptionCode: newCode,
         couponType: couponType,
+        slot, 
       });
     }
     return coupons;
@@ -727,7 +762,7 @@ export class DataService {
         .filter((c) => c.status === 'issued')
         .map((c) => c.redemptionCode)
     );
-
+    const slot = this.getSlotFromCouponType(couponType);
     for (let i = 0; i < quantity; i++) {
       let newCode: string;
       do {
@@ -743,6 +778,7 @@ export class DataService {
         redeemDate: null,
         redemptionCode: newCode,
         couponType: couponType,
+        slot,
       });
     }
 
@@ -832,7 +868,56 @@ export class DataService {
     this.syncAllCouponsToFirestore();
   }
 
-  redeemCouponByCode(code: string): { success: boolean; message: string } {
+  // ⭐ UPDATED: अब Firestore check + existing logic दोन्ही ठेवले
+  async redeemCouponByCode(
+    code: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // 1️⃣ Firestore मध्ये actual status check – device ने redeem केलं असेल तर इथे दिसेल
+      const qFs = query(this.couponsCol, where('redemptionCode', '==', code));
+      const snapFs = await getDocs(qFs);
+
+      if (!snapFs.empty) {
+        const fsData: any = snapFs.docs[0].data();
+        const fsStatus = fsData.status as Coupon['status'];
+        const fsCouponId = fsData.couponId as string;
+
+        let redeemDateIso: string | null = null;
+        if (fsData.redeemDate && fsData.redeemDate.toDate) {
+          redeemDateIso = fsData.redeemDate.toDate().toISOString();
+        } else if (fsData.redeemDate) {
+          redeemDateIso = fsData.redeemDate;
+        }
+
+        if (fsStatus === 'redeemed') {
+          // local state update करा
+          this._coupons.update((coupons) =>
+            coupons.map((c) =>
+              c.couponId === fsCouponId
+                ? { ...c, status: 'redeemed', redeemDate: redeemDateIso || c.redeemDate }
+                : c
+            )
+          );
+
+          if (redeemDateIso) {
+            const when = new Date(redeemDateIso);
+            return {
+              success: false,
+              message: `This coupon has already been redeemed on ${when.toLocaleString()}.`,
+            };
+          }
+          return {
+            success: false,
+            message: 'This coupon has already been redeemed.',
+          };
+        }
+      }
+    } catch (err) {
+      console.error('Firestore status check failed, falling back to local logic:', err);
+      // खाली local logic तरी चालेल
+    }
+
+    // 2️⃣ तुझा original local logic (unchanged)
     const couponToRedeem = this._coupons().find(
       (c) => c.redemptionCode === code && c.status === 'issued'
     );
@@ -1093,7 +1178,7 @@ export class DataService {
     do {
       newCode = this.generateRedemptionCode();
     } while (existingCodes.has(newCode));
-
+    const slot = this.getSlotFromCouponType(request.couponType);
     const guestCoupon: Coupon = {
       couponId: this.generateCouponId(),
       dateIssued: new Date().toISOString(),
@@ -1101,6 +1186,7 @@ export class DataService {
       redeemDate: null,
       redemptionCode: newCode,
       couponType: request.couponType,
+      slot,
       isGuestCoupon: true,
       sharedByEmployeeId: request.employeeId,
       guestName: request.guestName,

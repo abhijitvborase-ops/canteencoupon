@@ -1,24 +1,74 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-  }
-  
-  /* सगळं content mobile सारखं दिसण्यासाठी एक wrapper */
-  .app-shell {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;   /* मध्ये आणण्यासाठी */
-  }
-  
-  /* actual screen ची मर्यादा – mobile सारखी width */
-  .app-shell-inner {
-    width: 100%;
-    max-width: 480px;          /* mobile सारखी max width */
-    padding: 16px;             /* थोडं gap */
-    box-sizing: border-box;
-  }
-  
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* सगळं content mobile सारखं दिसण्यासाठी एक wrapper */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center; /* मध्ये आणण्यासाठी */
+}
+
+/* actual screen ची मर्यादा – mobile सारखी width */
+.app-shell-inner {
+  width: 100%;
+  max-width: 480px; /* mobile सारखी max width */
+  padding: 16px; /* थोडं gap */
+  box-sizing: border-box;
+}
+
+/* =======================
+   🔔 ALERT BANNER STYLES
+   ======================= */
+
+.coupon-alert-banner {
+  padding: 18px 24px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  text-transform: uppercase;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+  animation: popupFade 0.3s ease-out;
+}
+
+/* Employee Name */
+.coupon-alert-banner .emp-name {
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+
+/* Message */
+.coupon-alert-banner .msg {
+  font-size: 1.3rem;
+}
+
+/* 🎉 SUCCESS: Coupon Redeemed */
+.alert-redeemed {
+  background-color: #00875a;
+  color: #ffffff;
+}
+
+/* ❌ ERROR: No Active Coupon */
+.alert-not-available {
+  background-color: #d32f2f;
+  color: #ffffff;
+}
+
+/* ⚠ WARNING: Already Redeemed */
+.alert-already-redeemed {
+  background-color: #ff9800;
+  color: #ffffff;
+}
+
+/* Popup Animation */
+@keyframes popupFade {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}

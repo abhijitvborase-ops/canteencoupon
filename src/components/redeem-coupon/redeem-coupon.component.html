@@ -51,7 +51,20 @@
           </button>
         </form>
     </div>
-    
+    <!-- मोठा Alert Banner + Colors + Sound (logic TS मध्ये आहे) -->
+<div
+*ngIf="alertVisible()"
+class="coupon-alert-banner"
+[ngClass]="{
+  'alert-redeemed': alertType() === 'redeemed',
+  'alert-not-available': alertType() === 'not_available',
+  'alert-already-redeemed': alertType() === 'already_redeemed'
+}"
+>
+<div class="msg">
+  {{ alertMessage() }}
+</div>
+</div>
     @if (redeemStatusMessage(); as msg) {
       <div class="mt-4">
         @if(msg.type === 'success') {

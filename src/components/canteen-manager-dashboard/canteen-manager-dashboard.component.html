@@ -17,6 +17,23 @@
     </div>
   </div>
 
+  <div
+  *ngIf="alertVisible()"
+  class="coupon-alert-banner"
+  [ngClass]="{
+    'alert-redeemed': alertType() === 'redeemed',
+    'alert-not-available': alertType() === 'not_available',
+    'alert-already-redeemed': alertType() === 'already_redeemed'
+  }"
+>
+  <div class="emp-name" *ngIf="alertEmployeeName()">
+    {{ alertEmployeeName() }}
+  </div>
+  <div class="msg">
+    {{ alertMessage() }}
+  </div>
+</div>
+
   <!-- Summary Cards -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">

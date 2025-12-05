@@ -7,7 +7,8 @@ export interface Coupon {
   redeemDate: string | null;
   redemptionCode: string;
   couponType: 'Breakfast' | 'Lunch/Dinner' | 'Snacks' | 'Beverage';
-
+  slot?: number;
+  
   // Guest pass support
   isGuestCoupon?: boolean;
   sharedByEmployeeId?: number;
