@@ -22,7 +22,7 @@ import {
   pingServer,
   registerVersion,
   updateEmulatorBanner
-} from "./chunk-B7MXEDIW.js";
+} from "./chunk-G4EQ7ZQB.js";
 
 // node_modules/@firebase/webchannel-wrapper/dist/bloom-blob/esm/bloom_blob_es2018.js
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
@@ -18831,4 +18831,4 @@ export {
    * limitations under the License.
    *)
 */
-//# sourceMappingURL=chunk-ZYSZCD4T.js.map
+//# sourceMappingURL=chunk-X4ZIDR7K.js.map

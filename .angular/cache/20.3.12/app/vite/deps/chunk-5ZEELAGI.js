@@ -278,7 +278,7 @@ import {
   ɵɵnamespaceSVG,
   ɵɵresetView,
   ɵɵrestoreView
-} from "./chunk-GLQ7EIY3.js";
+} from "./chunk-WYBNGBD4.js";
 import {
   Subject,
   Subscription,
@@ -287,7 +287,7 @@ import {
 import {
   __spreadProps,
   __spreadValues
-} from "./chunk-H2SRQSE4.js";
+} from "./chunk-46DXP6YY.js";
 
 // node_modules/@angular/core/fesm2022/attribute.mjs
 var Attribute = {
@@ -24617,4 +24617,4 @@ export {
    * found in the LICENSE file at https://angular.dev/license
    *)
 */
-//# sourceMappingURL=chunk-AGYEJ74I.js.map
+//# sourceMappingURL=chunk-5ZEELAGI.js.map

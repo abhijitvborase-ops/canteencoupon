@@ -15,16 +15,22 @@
     <div class="p-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
       <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Employee Management</h2>
       <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+        <button
+  (click)="downloadSelectedQrPdf()"
+  class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+  Generate QR PDF
+</button>
         <a routerLink="/admin/add-employee" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-center">
           Add Employee
         </a>
+        
         <a routerLink="/admin/add-contract-employee" class="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 text-center">
           Add Contractual Employee
         </a>
          <a routerLink="/admin/add-admin-canteen" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 text-center">
           Add Admin/Manager
         </a>
-      </div>
+              </div>
     </div>
     <div class="p-6 border-t border-gray-200 dark:border-gray-700">
        <input (input)="updateSearch($event)" type="text" placeholder="Search by name, email, ID, or department..." class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
@@ -33,6 +39,9 @@
       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-700">
           <tr>
+            <th class="px-4 py-3">
+              Select
+            </th>
              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                <button (click)="setSort('name')" class="group inline-flex items-center">Name</button>
             </th>
@@ -54,6 +63,12 @@
         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           @for (employee of filteredAndSortedEmployees(); track employee.id) {
             <tr>
+              <td class="px-4 py-4">
+                <input
+                  type="checkbox"
+                  (change)="toggleEmployee(employee.id)"
+                >
+              </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm font-medium text-gray-900 dark:text-white">{{ employee.name }}</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">ID: {{ employee.employeeId }}</div>

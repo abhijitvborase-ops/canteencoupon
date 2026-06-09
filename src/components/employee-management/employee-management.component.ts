@@ -5,6 +5,8 @@ import { DataService } from '../../services/data.service';
 import { AuthService } from '../../services/auth.service';
 import { Employee } from '../../models/user.model';
 import { RouterLink } from '@angular/router';
+import { jsPDF } from 'jspdf';
+import * as QRCode from 'qrcode';
 
 @Component({
   selector: 'app-employee-management',
@@ -15,6 +17,21 @@ import { RouterLink } from '@angular/router';
 export class EmployeeManagementComponent {
   private dataService = inject(DataService);
   private authService = inject(AuthService);
+  selectedEmployees = signal<number[]>([]);
+
+toggleEmployee(id: number) {
+  const selected = this.selectedEmployees();
+
+  if (selected.includes(id)) {
+    this.selectedEmployees.set(
+      selected.filter(x => x !== id)
+    );
+  } else {
+    this.selectedEmployees.set(
+      [...selected, id]
+    );
+  }
+}
   
   // FIX: Added a type guard to ensure the user is an Employee before accessing employeeId.
   isSuperAdmin = computed(() => {
@@ -200,5 +217,70 @@ export class EmployeeManagementComponent {
       this.editEmployeeForm.patchValue({ department: newDepartmentName });
       this.isAddDepartmentModalOpen.set(false);
     }
+  }
+  async downloadSelectedQrPdf() {
+
+    const selectedIds = this.selectedEmployees();
+  
+    const employees =
+      this.filteredAndSortedEmployees()
+        .filter(e => selectedIds.includes(e.id));
+  
+    if (employees.length === 0) {
+      alert('Please select employees');
+      return;
+    }
+  
+    const pdf = new jsPDF('p', 'mm', 'a4');
+  
+    let x = 10;
+    let y = 10;
+    let count = 0;
+  
+    for (const emp of employees) {
+  
+      const qr = await QRCode.toDataURL(
+        emp.permanentQrCode || `EMP:${emp.id}`
+      );
+  
+      pdf.rect(x, y, 60, 50);
+  
+      pdf.setFontSize(10);
+      pdf.text('HYVA CANTEEN', x + 8, y + 7);
+  
+      pdf.setFontSize(8);
+      pdf.text(emp.name, x + 3, y + 14);
+  
+      pdf.text(
+        `ID: ${emp.employeeId}`,
+        x + 3,
+        y + 19
+      );
+  
+      pdf.addImage(
+        qr,
+        'PNG',
+        x + 16,
+        y + 21,
+        25,
+        25
+      );
+  
+      count++;
+      x += 65;
+  
+      if (count % 3 === 0) {
+        x = 10;
+        y += 55;
+      }
+  
+      if (count % 15 === 0) {
+        pdf.addPage();
+        x = 10;
+        y = 10;
+      }
+    }
+  
+    pdf.save('Employee_QR_Cards.pdf');
   }
 }

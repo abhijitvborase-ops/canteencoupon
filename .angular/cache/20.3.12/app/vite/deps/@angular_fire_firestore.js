@@ -1,3 +1,45 @@
+import "./chunk-YNJUEIM3.js";
+import {
+  FirebaseApp,
+  FirebaseApps,
+  VERSION,
+  ɵAngularFireSchedulers,
+  ɵgetAllInstancesOf,
+  ɵgetDefaultInstanceOf,
+  ɵzoneWrap
+} from "./chunk-O7S6SMIJ.js";
+import "./chunk-ZLCEZSPJ.js";
+import {
+  NgModule,
+  NgZone,
+  Optional,
+  PLATFORM_ID,
+  setClassMetadata,
+  ɵɵdefineNgModule
+} from "./chunk-5ZEELAGI.js";
+import {
+  InjectionToken,
+  Injector,
+  makeEnvironmentProviders,
+  ɵɵdefineInjector
+} from "./chunk-WYBNGBD4.js";
+import {
+  Observable,
+  __rest,
+  concatMap,
+  distinct,
+  distinctUntilChanged,
+  filter,
+  from,
+  map,
+  of,
+  pairwise,
+  pipe,
+  scan,
+  startWith,
+  switchMap,
+  timer
+} from "./chunk-4OMQZ6HS.js";
 import {
   AbstractUserDataWriter,
   AggregateField,
@@ -117,16 +159,7 @@ import {
   waitForPendingWrites,
   where,
   writeBatch
-} from "./chunk-ZYSZCD4T.js";
-import {
-  FirebaseApp,
-  FirebaseApps,
-  VERSION,
-  ɵAngularFireSchedulers,
-  ɵgetAllInstancesOf,
-  ɵgetDefaultInstanceOf,
-  ɵzoneWrap
-} from "./chunk-RKWO6YLY.js";
+} from "./chunk-X4ZIDR7K.js";
 import {
   Component,
   Deferred,
@@ -162,41 +195,8 @@ import {
   querystringDecode,
   registerVersion,
   updateEmulatorBanner
-} from "./chunk-B7MXEDIW.js";
-import "./chunk-INQUE5AW.js";
-import "./chunk-WRNAXU25.js";
-import {
-  NgModule,
-  NgZone,
-  Optional,
-  PLATFORM_ID,
-  setClassMetadata,
-  ɵɵdefineNgModule
-} from "./chunk-AGYEJ74I.js";
-import {
-  InjectionToken,
-  Injector,
-  makeEnvironmentProviders,
-  ɵɵdefineInjector
-} from "./chunk-GLQ7EIY3.js";
-import {
-  Observable,
-  __rest,
-  concatMap,
-  distinct,
-  distinctUntilChanged,
-  filter,
-  from,
-  map,
-  of,
-  pairwise,
-  pipe,
-  scan,
-  startWith,
-  switchMap,
-  timer
-} from "./chunk-4OMQZ6HS.js";
-import "./chunk-H2SRQSE4.js";
+} from "./chunk-G4EQ7ZQB.js";
+import "./chunk-46DXP6YY.js";
 
 // node_modules/@firebase/app-check/dist/esm/index.esm2017.js
 var APP_CHECK_STATES = /* @__PURE__ */ new Map();
