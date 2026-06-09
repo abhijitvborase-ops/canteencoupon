@@ -9,4 +9,6 @@ export interface Employee {
   department?: string;
   status: 'active' | 'deactivated';
   contractor?: string;
+  permanentQrCode?: string;
+  lastRedeemedDate?: string;
 }

@@ -630,6 +630,8 @@ export class DataService {
       ...employeeData,
       id: newId,
       status: 'active',
+      permanentQrCode: `EMP:${newId}`,
+      lastRedeemedDate: '',
     };
   
     this._employees.update((employees) => [...employees, newEmployee]);
@@ -1179,7 +1181,138 @@ export class DataService {
       message: `Coupon redeemed successfully for ${employee?.name}.`,
     };
   }
-
+  async redeemPermanentQr(
+    qrText: string
+  ): Promise<{ success: boolean; message: string }> {
+  
+    try {
+  
+      // QR format check
+      if (!qrText.startsWith('EMP:')) {
+        return {
+          success: false,
+          message: 'Invalid Employee QR',
+        };
+      }
+  
+      const employeeId = Number(qrText.replace('EMP:', '').trim());
+  
+      // employee find
+      const employee = this._employees().find(
+        (e) => e.id === employeeId
+      );
+  
+      if (!employee) {
+        return {
+          success: false,
+          message: 'Employee not found',
+        };
+      }
+  
+      // inactive employee
+      if (employee.status === 'deactivated') {
+        return {
+          success: false,
+          message: 'Employee account deactivated',
+        };
+      }
+      const now = new Date();
+      const hour = now.getHours();
+      
+      let requiredSlot = 0;
+      
+      // Breakfast slot
+      if (hour >= 11) {
+        requiredSlot = 1;
+      }
+      
+      const availableCoupon = this._coupons()
+        .filter(
+          (c) =>
+            c.employeeId === employee.id &&
+            c.status === 'issued' &&
+            c.slot === requiredSlot
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.dateIssued).getTime() -
+            new Date(b.dateIssued).getTime()
+        )[0];
+      
+      if (!availableCoupon) {
+        return {
+          success: false,
+          message: `No available coupon for ${employee.name}`,
+        };
+      }
+      // today date
+      const today = new Date().toISOString().split('T')[0];
+  
+      // already redeemed
+      if (employee.lastRedeemedDate === today) {
+        return {
+          success: false,
+          message: `${employee.name} already redeemed coupon today`,
+        };
+      }
+      this._coupons.update((coupons) =>
+        coupons.map((c) =>
+          c.couponId === availableCoupon.couponId
+            ? {
+                ...c,
+                status: 'redeemed',
+                redeemDate: new Date().toISOString(),
+              }
+            : c
+        )
+      );
+      
+      this.syncAllCouponsToFirestore();
+      // update employee
+      this._employees.update((employees) =>
+        employees.map((e) =>
+          e.id === employeeId
+            ? {
+                ...e,
+                lastRedeemedDate: today,
+              }
+            : e
+        )
+      );
+  
+      // Firestore sync
+      this.syncAllEmployeesToFirestore();
+  
+      // save punch event
+      const punchRef = doc(
+        this.punchEventsCol,
+        `PERM-${Date.now()}`
+      );
+  
+      await setDoc(punchRef, {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        resultType: 'redeemed',
+        message: `${availableCoupon.couponType} coupon redeemed for ${employee.name}`,
+        createdAt: new Date().toISOString(),
+        mode: 'permanent_qr',
+      });
+  
+      return {
+        success: true,
+        message: `${availableCoupon.couponType} coupon redeemed successfully for ${employee.name}`,
+      };
+  
+    } catch (err) {
+  
+      console.error(err);
+  
+      return {
+        success: false,
+        message: 'Failed to redeem employee QR',
+      };
+    }
+  }
   removeLastCouponBatch(
     employeeId: number
   ): { success: boolean; message: string; removedCount: number } {

@@ -86,8 +86,15 @@ export class RedeemCouponComponent implements OnDestroy {
     const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
     const onScanSuccess = (decodedText: string) => {
-      this.redeemCouponForm.patchValue({ code: decodedText });
-      this.handleRedeemCoupon();
+      if (decodedText.startsWith('EMP:')) {
+
+        this.handlePermanentQr(decodedText);
+      
+      } else {
+      
+        this.redeemCouponForm.patchValue({ code: decodedText });
+        this.handleRedeemCoupon();
+      }
       this.hideScanner();
     };
 
@@ -162,7 +169,40 @@ export class RedeemCouponComponent implements OnDestroy {
     this.redeemCouponForm.reset();
     setTimeout(() => this.redeemStatusMessage.set(null), 7000);
   }
+  async handlePermanentQr(qrText: string) {
 
+    this.hideScanner();
+  
+    try {
+  
+      const result =
+        await this.dataService.redeemPermanentQr(qrText);
+  
+      this.redeemStatusMessage.set({
+        type: result.success ? 'success' : 'error',
+        text: result.message,
+      });
+  
+      if (result.success) {
+        this.showAlert('redeemed', result.message);
+      } else if (
+        result.message.toLowerCase().includes('already')
+      ) {
+        this.showAlert('already_redeemed', result.message);
+      } else {
+        this.showAlert('not_available', result.message);
+      }
+  
+    } catch (err) {
+  
+      console.error(err);
+  
+      this.showAlert(
+        'not_available',
+        'QR redeem failed'
+      );
+    }
+  }
   // ========== ALERT + VOICE HELPERS ==========
 
   private showAlert(type: AlertType, message: string) {

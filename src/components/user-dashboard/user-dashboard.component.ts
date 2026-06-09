@@ -12,6 +12,13 @@ import * as QRCode from 'qrcode';
   imports: [CommonModule],
 })
 export class EmployeeDashboardComponent {
+  constructor() {
+
+    setTimeout(() => {
+      this.generatePermanentEmployeeQr();
+    }, 500);
+  
+  }
   private authService = inject(AuthService);
   private dataService = inject(DataService);
   
@@ -27,6 +34,8 @@ export class EmployeeDashboardComponent {
   // Redeem coupon modal state
   selectedCouponForRedemption = signal<Coupon | null>(null);
   qrCodeDataUrl = signal<string | null>(null);
+
+  employeeQrCodeDataUrl = signal<string | null>(null);
 
   // Guest QR modal state
   selectedGuestCouponForQr = signal<Coupon | null>(null);
@@ -315,4 +324,110 @@ export class EmployeeDashboardComponent {
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
-}
+  downloadQrCard() {
+
+    const employee = this.currentEmployee();
+  
+    if (!employee || !this.employeeQrCodeDataUrl()) {
+      return;
+    }
+  
+    const win = window.open('', '_blank');
+  
+    if (!win) return;
+  
+    win.document.write(`
+      <html>
+        <head>
+          <title>Employee QR Card</title>
+          <style>
+            body{
+              font-family: Arial;
+              display:flex;
+              justify-content:center;
+              align-items:center;
+              height:100vh;
+              background:#f5f5f5;
+            }
+  
+            .card{
+              width:350px;
+              border:2px solid #000;
+              border-radius:12px;
+              padding:20px;
+              text-align:center;
+              background:white;
+            }
+  
+            .qr{
+              width:220px;
+              height:220px;
+            }
+  
+            h2{
+              margin-bottom:10px;
+            }
+  
+            p{
+              margin:5px;
+            }
+          </style>
+        </head>
+  
+        <body>
+  
+          <div class="card">
+  
+            <h2>HYVA CANTEEN</h2>
+  
+            <img
+              src="${this.employeeQrCodeDataUrl()}"
+              class="qr"
+            />
+  
+            <p><b>${employee.name}</b></p>
+  
+            <p>Employee ID: ${employee.id}</p>
+  
+          </div>
+  
+          <script>
+            window.onload = () => {
+              window.print();
+            };
+          </script>
+  
+        </body>
+      </html>
+    `);
+  
+    win.document.close();
+  }
+  async generatePermanentEmployeeQr() {
+
+    const employee = this.currentEmployee();
+  
+    if (!employee) return;
+  
+    try {
+  
+      const qrData = `EMP:${employee.id}`;
+  
+      const dataUrl = await QRCode.toDataURL(
+        qrData,
+        {
+          width: 220,
+          margin: 2,
+        }
+      );
+  
+      this.employeeQrCodeDataUrl.set(dataUrl);
+  
+    } catch (err) {
+  
+      console.error(err);
+  
+    }  
+  }
+  }
+  

@@ -7,6 +7,42 @@
       {{ employee.department }} Department
     </p>
   }
+  <div
+  class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6"
+>
+
+  <h2
+    class="text-xl font-bold text-gray-800 dark:text-white mb-4"
+  >
+    My Permanent QR
+  </h2>
+
+  <div class="text-center">
+
+    @if (employeeQrCodeDataUrl()) {
+
+      <img
+        [src]="employeeQrCodeDataUrl()"
+        class="w-56 h-56 mx-auto"
+      />
+
+    }
+
+    <p
+      class="mt-4 text-sm text-gray-500 dark:text-gray-400"
+    >
+      Show this QR to canteen manager
+    </p>
+    <button
+  (click)="downloadQrCard()"
+  class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+>
+  Download QR Card
+</button>
+
+  </div>
+
+</div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <div class="lg:col-span-2">
