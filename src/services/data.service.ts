@@ -8,6 +8,8 @@ import { DailyMenu } from '../models/menu.model';
 import { GuestCouponRequest } from '../models/guest-coupon-request.model';
 import { onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { QrCard } from '../models/qr-card.model';
+import { PendingMealRequest }
+from '../models/pending-meal-request.model';
 
 import {
   Firestore,
@@ -42,6 +44,8 @@ export class DataService {
   private _contractors = signal<Contractor[]>([]);
   private _menus = signal<DailyMenu[]>([]);
   private _guestCouponRequests = signal<GuestCouponRequest[]>([]);
+  private _pendingMealRequests =
+  signal<PendingMealRequest[]>([]);
   
   // 🔁 Device punchEvents साठी latest event
   private _lastPunchEvent = signal<PunchEvent | null>(null);
@@ -63,6 +67,11 @@ export class DataService {
     this.firestore,
     'guestCouponRequests'
   );
+  private readonly pendingMealRequestsCol =
+  collection(
+    this.firestore,
+    'pendingMealRequests'
+  );
   // 🔁 New: punchEvents collection
   private readonly punchEventsCol = collection(this.firestore, 'punchEvents');
 
@@ -73,6 +82,8 @@ export class DataService {
   contractors = this._contractors.asReadonly();
   menus = this._menus.asReadonly();
   guestCouponRequests = this._guestCouponRequests.asReadonly();
+  pendingMealRequests =
+  this._pendingMealRequests.asReadonly();
 
   // 🔁 Latest device punch event (Canteen Manager dashboard वापरेल)
   lastPunchEvent = this._lastPunchEvent.asReadonly();
@@ -159,6 +170,7 @@ export class DataService {
         menuSnap,
         notificationSnap,
         guestReqSnap,
+        pendingMealSnap,
       ] = await Promise.all([
         getDocs(this.employeesCol),
         getDocs(this.couponsCol),
@@ -166,6 +178,7 @@ export class DataService {
         getDocs(this.menusCol),
         getDocs(this.notificationsCol),
         getDocs(this.guestCouponRequestsCol),
+        getDocs(this.pendingMealRequestsCol),
       ]);
 
       const employees: Employee[] = empSnap.docs.map(
@@ -204,6 +217,10 @@ export class DataService {
       const guestRequests: GuestCouponRequest[] = guestReqSnap.docs.map(
         (d) => d.data() as GuestCouponRequest
       );
+      const pendingMealRequests: PendingMealRequest[] =
+      pendingMealSnap.docs.map(
+      (d) => d.data() as PendingMealRequest
+      );
 
       const isFirstTime =
         employees.length === 0 &&
@@ -232,6 +249,7 @@ export class DataService {
         this._menus.set(menus);
         this._notifications.set(notifications);
         this._guestCouponRequests.set(guestRequests);
+        this._pendingMealRequests.set(pendingMealRequests);
       }
     } catch (err: any) {
       const msg = String(err?.message ?? '');
@@ -572,6 +590,72 @@ export class DataService {
       console.error('Error syncing guest coupon requests collection:', err);
     }
   }
+  private async syncAllPendingMealRequestsToFirestore() {
+
+    try {
+  
+      const snap =
+        await getDocs(
+          this.pendingMealRequestsCol
+        );
+  
+      const existingIds =
+        new Set(
+          snap.docs.map(d => d.id)
+        );
+  
+      const requests =
+        this._pendingMealRequests();
+  
+      const ops: Promise<any>[] = [];
+  
+      for (const r of requests) {
+  
+        const id = r.requestId;
+  
+        existingIds.delete(id);
+  
+        const ref =
+          doc(
+            this.pendingMealRequestsCol,
+            id
+          );
+  
+        ops.push(
+          setDoc(
+            ref,
+            this.removeUndefined(r)
+          )
+        );
+  
+      }
+  
+      existingIds.forEach(id => {
+  
+        const ref =
+          doc(
+            this.pendingMealRequestsCol,
+            id
+          );
+  
+        ops.push(
+          deleteDoc(ref)
+        );
+  
+      });
+  
+      await Promise.all(ops);
+  
+    } catch (err) {
+  
+      console.error(
+        'Error syncing pending meal requests:',
+        err
+      );
+  
+    }
+  
+  }
 
   // =========================
   // Initial seed data
@@ -599,6 +683,7 @@ export class DataService {
     this._notifications.set([]); // Start with no notifications
     this._menus.set([]); // Start with no menus
     this._guestCouponRequests.set([]); // Start with no guest requests
+    this._pendingMealRequests.set([]);
   }
 
   // =========================
@@ -1006,6 +1091,63 @@ return newEmployee;
       countToGenerate,
       couponType
     );
+    const pendingRequest =
+  this._pendingMealRequests().find(r =>
+
+    r.employeeId === employeeId &&
+
+    r.status === 'pending' &&
+
+    (
+      (
+        couponType === 'Breakfast' &&
+        (
+          r.mealType === 'morning' ||
+          r.mealType === 'evening'
+        )
+      )
+
+      ||
+
+      (
+        couponType === 'Lunch/Dinner' &&
+        (
+          r.mealType === 'lunch' ||
+          r.mealType === 'dinner'
+        )
+      )
+
+    )
+
+  );
+
+if (
+  pendingRequest &&
+  newCoupons.length > 0
+) {
+
+  newCoupons[0].status =
+    'redeemed';
+
+  newCoupons[0].redeemDate =
+    new Date().toISOString();
+
+  this._pendingMealRequests.update(
+    list =>
+      list.map(r =>
+        r.requestId ===
+        pendingRequest.requestId
+          ? {
+              ...r,
+              status: 'completed'
+            }
+          : r
+      )
+  );
+
+  this.syncAllPendingMealRequestsToFirestore();
+
+}
     this._coupons.update((coupons) => [...coupons, ...newCoupons]);
 
     this.syncAllCouponsToFirestore();
@@ -1304,7 +1446,14 @@ return newEmployee;
   }
   async redeemPermanentQr(
     qrText: string
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{
+    success: boolean;
+    message: string;
+    employeeId?: number;
+    employeeName?: string;
+    mealType?: string;
+    canCreateRequest?: boolean;
+  }> {
   
     try { 
       let employee: Employee | undefined;
@@ -1385,12 +1534,16 @@ else {
             new Date(b.dateIssued).getTime()
         )[0];
       
-      if (!availableCoupon) {
-        return {
-          success: false,
-          message: `No available coupon for ${employee.name}`,
-        };
-      }
+        if (!availableCoupon) {
+          return {
+            success: false,
+            message: `No available coupon for ${employee.name}`,
+            employeeId: employee.id,
+            employeeName: employee.name,
+            mealType: mealWindow,
+            canCreateRequest: true
+          };
+        }
       // today date
       const today = new Date().toISOString().split('T')[0];
   
@@ -1663,7 +1816,53 @@ else {
   getPendingGuestCouponRequests(): GuestCouponRequest[] {
     return this._guestCouponRequests().filter((r) => r.status === 'pending');
   }
-
+  createPendingMealRequest(
+    employeeId: number,
+    employeeName: string,
+    mealType: 'morning' | 'lunch' | 'evening' | 'dinner'
+  ): { success: boolean; message: string } {
+  
+    const todayStr =
+      new Date().toISOString().split('T')[0];
+  
+    const alreadyExists =
+      this._pendingMealRequests().some(
+        r =>
+          r.employeeId === employeeId &&
+          r.mealType === mealType &&
+          r.mealDate === todayStr &&
+          r.status === 'pending'
+      );
+  
+    if (alreadyExists) {
+      return {
+        success: false,
+        message:
+          'Pending meal request already exists.'
+      };
+    }
+  
+    const newRequest: PendingMealRequest = {
+      requestId:
+        'PMR-' + Date.now(),
+      employeeId,
+      employeeName,
+      mealType,
+      mealDate: todayStr,
+      status: 'pending'
+    };
+  
+    this._pendingMealRequests.update(
+      list => [newRequest, ...list]
+    );
+    this.syncAllPendingMealRequestsToFirestore();
+  
+    return {
+      success: true,
+      message:
+        'Meal request created successfully.'
+    };
+  }
   getProcessedGuestCouponRequests(): GuestCouponRequest[] {
     return this._guestCouponRequests().filter((r) => r.status !== 'pending');
   }

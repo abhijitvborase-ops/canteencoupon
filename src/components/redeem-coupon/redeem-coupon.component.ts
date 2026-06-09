@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
+  computed,
   OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -28,6 +29,40 @@ type AlertType = 'redeemed' | 'not_available' | 'already_redeemed';
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
 })
 export class RedeemCouponComponent implements OnDestroy {
+  requestFilter =
+  signal<'all' | 'pending' | 'completed'>(
+    'all'
+  );
+
+pendingMealRequests = computed(() => {
+
+  const filter =
+    this.requestFilter();
+
+  const requests =
+    this.dataService
+      .pendingMealRequests();
+
+  if (filter === 'pending') {
+    return requests.filter(
+      r => r.status === 'pending'
+    );
+  }
+
+  if (filter === 'completed') {
+    return requests.filter(
+      r => r.status === 'completed'
+    );
+  }
+
+  return requests;
+
+});
+  pendingEmployeeId = signal<number | null>(null);
+
+pendingEmployeeName = signal('');
+
+pendingMealType = signal('');
   private dataService = inject(DataService);
   private html5QrCode: any;
 
@@ -190,7 +225,28 @@ export class RedeemCouponComponent implements OnDestroy {
       ) {
         this.showAlert('already_redeemed', result.message);
       } else {
-        this.showAlert('not_available', result.message);
+
+        if (result.canCreateRequest) {
+      
+          this.pendingEmployeeId.set(
+            result.employeeId || null
+          );
+      
+          this.pendingEmployeeName.set(
+            result.employeeName || ''
+          );
+      
+          this.pendingMealType.set(
+            result.mealType || ''
+          );
+      
+        }
+      
+        this.showAlert(
+          'not_available',
+          result.message
+        );
+      
       }
   
     } catch (err) {
@@ -217,7 +273,28 @@ export class RedeemCouponComponent implements OnDestroy {
       this.alertType.set(null);
     }, 8000);
   }
+  createMealRequest() {
 
+    const result =
+      this.dataService.createPendingMealRequest(
+        this.pendingEmployeeId()!,
+        this.pendingEmployeeName(),
+        this.pendingMealType() as any
+      );
+  
+    alert(result.message);
+  
+    if (result.success) {
+  
+      this.pendingEmployeeId.set(null);
+  
+      this.pendingEmployeeName.set('');
+  
+      this.pendingMealType.set('');
+  
+    }
+  
+  }
   hideAlertManually() {
     this.alertVisible.set(false);
     this.alertType.set(null);
