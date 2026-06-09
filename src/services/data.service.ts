@@ -631,7 +631,11 @@ export class DataService {
       id: newId,
       status: 'active',
       permanentQrCode: `EMP:${newId}`,
-      lastRedeemedDate: '',
+    
+      lastMorningBreakfastDate: '',
+      lastLunchDate: '',
+      lastEveningBreakfastDate: '',
+      lastDinnerDate: '',
     };
   
     this._employees.update((employees) => [...employees, newEmployee]);
@@ -1217,14 +1221,35 @@ export class DataService {
         };
       }
       const now = new Date();
-      const hour = now.getHours();
-      
-      let requiredSlot = 0;
-      
-      // Breakfast slot
-      if (hour >= 11) {
-        requiredSlot = 1;
-      }
+
+const currentMinutes =
+  now.getHours() * 60 + now.getMinutes();
+
+let requiredSlot = 0;
+let mealWindow = '';
+
+if (currentMinutes >= 450 && currentMinutes <= 600) {
+  requiredSlot = 0;
+  mealWindow = 'morning';
+}
+else if (currentMinutes >= 690 && currentMinutes <= 870) {
+  requiredSlot = 1;
+  mealWindow = 'lunch';
+}
+else if (currentMinutes >= 990 && currentMinutes <= 1110) {
+  requiredSlot = 0;
+  mealWindow = 'evening';
+}
+else if (currentMinutes >= 1170 && currentMinutes <= 1290) {
+  requiredSlot = 1;
+  mealWindow = 'dinner';
+}
+else {
+  return {
+    success: false,
+    message: 'Meal timing not active',
+  };
+}
       
       const availableCoupon = this._coupons()
         .filter(
@@ -1249,12 +1274,46 @@ export class DataService {
       const today = new Date().toISOString().split('T')[0];
   
       // already redeemed
-      if (employee.lastRedeemedDate === today) {
+      if (
+        mealWindow === 'morning' &&
+        employee.lastMorningBreakfastDate === today
+      ) {
         return {
           success: false,
-          message: `${employee.name} already redeemed coupon today`,
+          message: `${employee.name} already redeemed morning breakfast`,
         };
       }
+      
+      if (
+        mealWindow === 'lunch' &&
+        employee.lastLunchDate === today
+      ) {
+        return {
+          success: false,
+          message: `${employee.name} already redeemed lunch`,
+        };
+      }
+      
+      if (
+        mealWindow === 'evening' &&
+        employee.lastEveningBreakfastDate === today
+      ) {
+        return {
+          success: false,
+          message: `${employee.name} already redeemed evening breakfast`,
+        };
+      }
+      
+      if (
+        mealWindow === 'dinner' &&
+        employee.lastDinnerDate === today
+      ) {
+        return {
+          success: false,
+          message: `${employee.name} already redeemed dinner`,
+        };
+      }
+      
       this._coupons.update((coupons) =>
         coupons.map((c) =>
           c.couponId === availableCoupon.couponId
@@ -1266,20 +1325,46 @@ export class DataService {
             : c
         )
       );
+      const empDebug = this._employees().find(
+        (e) => e.id === employeeId
+      );
       
+      console.log('DEBUG EMPLOYEE', empDebug);
       this.syncAllCouponsToFirestore();
       // update employee
       this._employees.update((employees) =>
-        employees.map((e) =>
-          e.id === employeeId
-            ? {
-                ...e,
-                lastRedeemedDate: today,
-              }
-            : e
-        )
+        employees.map((e) => {
+      
+          if (e.id !== employeeId) {
+            return e;
+          }
+      
+          const updated = { ...e };
+      
+          if (mealWindow === 'morning') {
+            updated.lastMorningBreakfastDate = today;
+          }
+      
+          if (mealWindow === 'lunch') {
+            updated.lastLunchDate = today;
+          }
+      
+          if (mealWindow === 'evening') {
+            updated.lastEveningBreakfastDate = today;
+          }
+      
+          if (mealWindow === 'dinner') {
+            updated.lastDinnerDate = today;
+          }
+      
+          return updated;
+        })
       );
-  
+      const empCheck = this._employees().find(
+        e => e.id === employeeId
+      );
+      
+      console.log('EMP AFTER UPDATE', empCheck);
       // Firestore sync
       this.syncAllEmployeesToFirestore();
   

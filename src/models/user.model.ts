@@ -11,4 +11,8 @@ export interface Employee {
   contractor?: string;
   permanentQrCode?: string;
   lastRedeemedDate?: string;
+  lastMorningBreakfastDate?: string;
+  lastLunchDate?: string;
+  lastEveningBreakfastDate?: string;
+  lastDinnerDate?: string;
 }
