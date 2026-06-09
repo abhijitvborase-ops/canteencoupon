@@ -18,7 +18,8 @@ export class EmployeeManagementComponent {
   private dataService = inject(DataService);
   private authService = inject(AuthService);
   selectedEmployees = signal<number[]>([]);
-
+  isQrPoolModalOpen = signal(false);
+  qrPoolCount = signal(100);
 toggleEmployee(id: number) {
   const selected = this.selectedEmployees();
 
@@ -128,7 +129,27 @@ toggleEmployee(id: number) {
   }
 
   // --- Modal and Action Logic ---
-
+  openQrPoolModal() {
+    this.isQrPoolModalOpen.set(true);
+  }
+  
+  closeQrPoolModal() {
+    this.isQrPoolModalOpen.set(false);
+  }
+  
+  async generateQrPoolCards() {
+  
+    await this.dataService.generateQrPool(
+      this.qrPoolCount()
+    );
+  
+    this.statusMessage.set({
+      type: 'success',
+      text: `${this.qrPoolCount()} QR cards generated successfully.`
+    });
+  
+    this.closeQrPoolModal();
+  }
   openEditModal(employee: Employee) {
     this.selectedEmployeeForAction.set(employee);
     this.editEmployeeForm.patchValue({
@@ -282,5 +303,165 @@ toggleEmployee(id: number) {
     }
   
     pdf.save('Employee_QR_Cards.pdf');
+  }
+  async downloadSelectedQrCardsPdf() {
+
+    const selected =
+      this.selectedQrCards();
+  
+    const cards =
+      this.qrCards()
+        .filter(c =>
+          selected.includes(c.cardCode)
+        );
+  
+    if (cards.length === 0) {
+  
+      alert('Please select QR cards');
+  
+      return;
+    }
+  
+    const pdf =
+      new jsPDF('p', 'mm', 'a4');
+  
+    let x = 10;
+    let y = 10;
+    let count = 0;
+  
+    for (const card of cards) {
+  
+      const qr =
+        await QRCode.toDataURL(
+          card.cardCode
+        );
+  
+      pdf.rect(x, y, 60, 50);
+  
+      pdf.setFontSize(10);
+      pdf.text(
+        'HYVA CANTEEN',
+        x + 8,
+        y + 7
+      );
+  
+      pdf.text(
+        card.cardCode,
+        x + 12,
+        y + 15
+      );
+  
+      pdf.addImage(
+        qr,
+        'PNG',
+        x + 16,
+        y + 18,
+        25,
+        25
+      );
+  
+      count++;
+      x += 65;
+  
+      if (count % 3 === 0) {
+        x = 10;
+        y += 55;
+      }
+  
+      if (count % 15 === 0) {
+        pdf.addPage();
+        x = 10;
+        y = 10;
+      }
+    }
+  
+    pdf.save('QR_Pool_Cards.pdf');
+  }
+  showQrPool = signal(false);
+  qrSearch = signal('');
+
+selectedQrCards = signal<string[]>([]);
+
+qrFilter = signal<'all' | 'available' | 'assigned'>('all');
+
+qrCards = computed(() => {
+
+  const filter = this.qrFilter();
+
+  const search =
+    this.qrSearch()
+      .toLowerCase();
+
+  let cards =
+    this.dataService.qrCards();
+
+  if (filter === 'available') {
+    cards = cards.filter(c => !c.assigned);
+  }
+
+  if (filter === 'assigned') {
+    cards = cards.filter(c => c.assigned);
+  }
+
+  if (search) {
+
+    cards = cards.filter(c =>
+
+      c.cardCode
+        .toLowerCase()
+        .includes(search)
+
+      ||
+
+      (c.employeeName || '')
+        .toLowerCase()
+        .includes(search)
+
+    );
+
+  }
+
+  return cards;
+
+});
+
+toggleQrCard(cardCode: string) {
+
+  const current = this.selectedQrCards();
+
+  if (current.includes(cardCode)) {
+
+    this.selectedQrCards.set(
+      current.filter(x => x !== cardCode)
+    );
+
+  } else {
+
+    this.selectedQrCards.set([
+      ...current,
+      cardCode
+    ]);
+
+  }
+  }
+  toggleAllQrCards() {
+
+    const allCards =
+      this.qrCards()
+        .map(c => c.cardCode);
+  
+    if (
+      this.selectedQrCards().length ===
+      allCards.length
+    ) {
+  
+      this.selectedQrCards.set([]);
+  
+    } else {
+  
+      this.selectedQrCards.set(allCards);
+  
+    }
+  
   }
 }

@@ -10,6 +10,7 @@ export interface Employee {
   status: 'active' | 'deactivated';
   contractor?: string;
   permanentQrCode?: string;
+  assignedQrCard?: string;
   lastRedeemedDate?: string;
   lastMorningBreakfastDate?: string;
   lastLunchDate?: string;

@@ -7,6 +7,7 @@ import { Contractor } from '../models/contractor.model';
 import { DailyMenu } from '../models/menu.model';
 import { GuestCouponRequest } from '../models/guest-coupon-request.model';
 import { onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { QrCard } from '../models/qr-card.model';
 
 import {
   Firestore,
@@ -34,12 +35,14 @@ export interface PunchEvent {
 export class DataService {
   // Local state (signals)
   private _employees = signal<Employee[]>([]);
+  private _qrCards = signal<QrCard[]>([]);
+  qrCards = this._qrCards.asReadonly();
   private _coupons = signal<Coupon[]>([]);
   private _notifications = signal<AppNotification[]>([]);
   private _contractors = signal<Contractor[]>([]);
   private _menus = signal<DailyMenu[]>([]);
   private _guestCouponRequests = signal<GuestCouponRequest[]>([]);
-
+  
   // 🔁 Device punchEvents साठी latest event
   private _lastPunchEvent = signal<PunchEvent | null>(null);
   // 🔁 Punch history (recent events list)
@@ -51,6 +54,7 @@ export class DataService {
 
   // Firestore collections
   private readonly employeesCol = collection(this.firestore, 'employees');
+  private readonly qrCardsCol = collection(this.firestore, 'qrCards');
   private readonly couponsCol = collection(this.firestore, 'coupons');
   private readonly contractorsCol = collection(this.firestore, 'contractors');
   private readonly menusCol = collection(this.firestore, 'menus');
@@ -106,6 +110,7 @@ export class DataService {
 
     // 👉 Coupons साठी real-time listener
     this.setupRealtimeCouponsListener();
+    this.setupRealtimeQrCardsListener();
 
     // 👉 Device कडून येणार्‍या punchEvents साठी real-time listener
     this.setupRealtimePunchEventsListener();
@@ -326,7 +331,20 @@ export class DataService {
       this._coupons.set(coupons);
     });
   }
+  private setupRealtimeQrCardsListener() {
 
+    onSnapshot(this.qrCardsCol, (snapshot) => {
+  
+      const cards: QrCard[] =
+        snapshot.docs.map(
+          d => d.data() as QrCard
+        );
+  
+      this._qrCards.set(cards);
+  
+    });
+  
+  }
     // 🔁 NEW: punchEvents वर real-time listener – device bridge साठी
     private setupRealtimePunchEventsListener() {
       // createdAt desc, latest 30 events
@@ -466,7 +484,68 @@ export class DataService {
       console.error('Error syncing notifications collection:', err);
     }
   }
+  async generateQrPool(quantity: number) {
 
+    const snap = await getDocs(this.qrCardsCol);
+  
+    let maxNo = 0;
+  
+    snap.docs.forEach(docSnap => {
+  
+      const data: any = docSnap.data();
+  
+      const num = Number(
+        String(data.cardCode)
+          .replace('QR', '')
+      );
+  
+      if (num > maxNo) {
+        maxNo = num;
+      }
+  
+    });
+  
+    for (let i = 1; i <= quantity; i++) {
+  
+      const nextNo = maxNo + i;
+  
+      const code =
+        `QR${String(nextNo).padStart(4, '0')}`;
+  
+      const ref = doc(
+        this.qrCardsCol,
+        code
+      );
+  
+      await setDoc(ref, {
+        cardCode: code,
+        assigned: false,
+        employeeId: null,
+        employeeName: null,
+      });
+    }
+  }
+  async assignQrCard(
+    cardCode: string,
+    employeeId: number,
+    employeeName: string
+  ) {
+  
+    const ref = doc(
+      this.qrCardsCol,
+      cardCode
+    );
+  
+    await setDoc(
+      ref,
+      {
+        assigned: true,
+        employeeId,
+        employeeName,
+      },
+      { merge: true }
+    );
+  }
   // संपूर्ण guestCouponRequests collection sync करणे
   private async syncAllGuestCouponRequestsToFirestore() {
     try {
@@ -639,8 +718,20 @@ export class DataService {
     };
   
     this._employees.update((employees) => [...employees, newEmployee]);
-    this.syncAllEmployeesToFirestore();
-    return newEmployee;
+
+if (employeeData.assignedQrCard) {
+
+  this.assignQrCard(
+    employeeData.assignedQrCard,
+    newEmployee.id,
+    newEmployee.name
+  );
+
+}
+
+this.syncAllEmployeesToFirestore();
+
+return newEmployee;
   }
   
     // 🔹 Canteen Manager add helper method
@@ -690,6 +781,32 @@ export class DataService {
   }
 
   deleteEmployee(employeeId: number): void {
+
+    const employee =
+      this._employees().find(
+        e => e.id === employeeId
+      );
+  
+    if (
+      employee?.assignedQrCard
+    ) {
+  
+      const ref = doc(
+        this.qrCardsCol,
+        employee.assignedQrCard
+      );
+  
+      setDoc(
+        ref,
+        {
+          assigned: false,
+          employeeId: null,
+          employeeName: null,
+        },
+        { merge: true }
+      );
+  
+    }
     // Remove employee
     this._employees.update((employees) =>
       employees.filter((emp) => emp.id !== employeeId)
@@ -1189,22 +1306,26 @@ export class DataService {
     qrText: string
   ): Promise<{ success: boolean; message: string }> {
   
-    try {
-  
-      // QR format check
-      if (!qrText.startsWith('EMP:')) {
-        return {
-          success: false,
-          message: 'Invalid Employee QR',
-        };
-      }
-  
-      const employeeId = Number(qrText.replace('EMP:', '').trim());
-  
-      // employee find
-      const employee = this._employees().find(
-        (e) => e.id === employeeId
-      );
+    try { 
+      let employee: Employee | undefined;
+
+if (qrText.startsWith('EMP:')) {
+
+  const employeeId = Number(
+    qrText.replace('EMP:', '').trim()
+  );
+
+  employee = this._employees().find(
+    e => e.id === employeeId
+  );
+
+} else {
+
+  employee = this._employees().find(
+    e => e.assignedQrCard === qrText
+  );
+
+}
   
       if (!employee) {
         return {
@@ -1326,7 +1447,7 @@ else {
         )
       );
       const empDebug = this._employees().find(
-        (e) => e.id === employeeId
+        (e) => e.id === employee.id
       );
       
       console.log('DEBUG EMPLOYEE', empDebug);
@@ -1335,7 +1456,7 @@ else {
       this._employees.update((employees) =>
         employees.map((e) => {
       
-          if (e.id !== employeeId) {
+          if (e.id !== employee.id) {
             return e;
           }
       
@@ -1361,7 +1482,7 @@ else {
         })
       );
       const empCheck = this._employees().find(
-        e => e.id === employeeId
+        e => e.id === employee.id
       );
       
       console.log('EMP AFTER UPDATE', empCheck);

@@ -18,6 +18,10 @@ export class AddEmployeeComponent {
   private router: Router = inject(Router);
   private route = inject(ActivatedRoute);
 
+  availableQrCards = computed(() =>
+    this.dataService.qrCards()
+      .filter(card => !card.assigned)
+  );
   isSuperAdmin = computed(() => {
     const user = this.authService.currentUser();
     return user && 'employeeId' in user && user.employeeId === 'admin01';
@@ -41,7 +45,9 @@ export class AddEmployeeComponent {
     password: new FormControl('', [Validators.required, Validators.minLength(6)]),
     department: new FormControl('', [Validators.required]),
     role: new FormControl<Employee['role']>('employee', [Validators.required]),
-    contractor: new FormControl('')
+    contractor: new FormControl(''),
+    qrMode: new FormControl('auto'),
+    assignedQrCard: new FormControl(''),
   });
 
   newDepartmentForm = new FormGroup({
@@ -115,6 +121,12 @@ export class AddEmployeeComponent {
         password: formValue.password!,
         role: formValue.role!,
       };
+      if (formValue.qrMode === 'pool') {
+
+        employeeData.assignedQrCard =
+          formValue.assignedQrCard || undefined;
+      
+      }
 
       if (formValue.role !== 'contractual employee') {
         employeeData.email = formValue.email || undefined;

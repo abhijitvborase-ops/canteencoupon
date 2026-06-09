@@ -97,7 +97,59 @@
             </select>
           </div>
         </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+          <div>
+            <label
+              class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              QR Mode
+            </label>
+        
+            <select
+              formControlName="qrMode"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600">
+        
+              <option value="auto">
+                Auto Generate QR
+              </option>
+        
+              <option value="pool">
+                Assign Existing QR
+              </option>
+        
+            </select>
+          </div>
+        
+          @if (addEmployeeForm.get('qrMode')?.value === 'pool') {
+        
+          <div>
+            <label
+              class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Available QR Card
+            </label>
+        
+            <select
+              formControlName="assignedQrCard"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600">
+        
+              <option value="">
+                Select QR Card
+              </option>
+        
+              @for (card of availableQrCards(); track card.cardCode) {
+        
+                <option [value]="card.cardCode">
+                  {{ card.cardCode }}
+                </option>
+        
+              }
+        
+            </select>
+          </div>
+        
+          }
+        
+        </div>
         <!-- Role Specific Fields -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           @if (addEmployeeForm.get('role')?.value === 'employee') {
