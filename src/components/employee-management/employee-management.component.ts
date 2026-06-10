@@ -264,38 +264,138 @@ toggleEmployee(id: number) {
         emp.permanentQrCode || `EMP:${emp.id}`
       );
   
-      pdf.rect(x, y, 60, 50);
-  
-      pdf.setFontSize(10);
-      pdf.text('HYVA CANTEEN', x + 8, y + 7);
-  
-      pdf.setFontSize(8);
-      pdf.text(emp.name, x + 3, y + 14);
-  
-      pdf.text(
-        `ID: ${emp.employeeId}`,
-        x + 3,
-        y + 19
-      );
-  
-      pdf.addImage(
-        qr,
-        'PNG',
-        x + 16,
-        y + 21,
-        25,
-        25
-      );
+    // Card Border
+pdf.setDrawColor(180);
+pdf.setLineWidth(0.5);
+pdf.roundedRect(
+  x,
+  y,
+  60,
+  85,
+  4,
+  4
+);
+
+// Header
+pdf.setFillColor(
+  25,
+  45,
+  95
+);
+
+pdf.roundedRect(
+  x,
+  y,
+  60,
+  10,
+  4,
+  4,
+  'F'
+);
+
+pdf.setTextColor(
+  255,
+  255,
+  255
+);
+
+pdf.setFontSize(10);
+pdf.setFont(
+  'helvetica',
+  'bold'
+);
+
+pdf.text(
+  'HYVA CANTEEN',
+  x + 30,
+  y + 8,
+  {
+    align: 'center'
+  }
+);
+
+// Employee Name
+pdf.setTextColor(
+  0,
+  0,
+  0
+);
+
+pdf.setFontSize(12);
+
+pdf.text(
+  emp.name,
+  x + 30,
+  y + 18,
+  { align: 'center' }
+);
+
+// Employee ID
+pdf.setFontSize(9);
+
+pdf.setFont(
+  'helvetica',
+  'normal'
+);
+
+pdf.text(
+  `ID : ${emp.employeeId}`,
+  x + 30,
+  y + 24,
+  { align: 'center' }
+);
+
+// QR Border
+pdf.setDrawColor(220);
+
+pdf.roundedRect(
+  x + 10,
+  y + 28,
+  40,
+  40,
+  3,
+  3
+);
+
+// QR Image
+pdf.addImage(
+  qr,
+  'PNG',
+  x + 15,
+  y + 33,
+  30,
+  30
+);
+
+// Footer Line
+pdf.line(
+  x + 5,
+  y + 72,
+  x + 55,
+  y + 72
+);
+
+pdf.setFontSize(8);
+pdf.setTextColor(90);
+
+pdf.text(
+  'SCAN TO REDEEM',
+  x + 30,
+  y + 78,
+  {
+    align: 'center'
+  }
+);
   
       count++;
       x += 65;
   
-      if (count % 3 === 0) {
+      if (count % 2 === 0) {
         x = 10;
-        y += 55;
+        y += 90;
       }
   
-      if (count % 15 === 0) {
+      if (count % 4 === 0) {
         pdf.addPage();
         x = 10;
         y = 10;
