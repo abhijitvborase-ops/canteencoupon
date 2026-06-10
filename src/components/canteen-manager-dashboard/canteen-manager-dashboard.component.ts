@@ -150,13 +150,7 @@ export class CanteenManagerDashboardComponent {
   private lastAlertedEventId = signal<string | null>(null);
 
   // sounds
-  private audioRedeemed = new Audio('assets/sounds/redeemed.mp3');
-  private audioNotAvailable = new Audio('assets/sounds/not-available.mp3');
-  private audioAlreadyRedeemed = new Audio(
-    'assets/sounds/already-redeemed.mp3'
-  );
-
-  constructor() {
+    constructor() {
     // 🔹 1) component load होताना आधीच Firestore मध्ये असलेला शेवटचा event
     // baseline म्हणून फक्त store करायचा, highlight नाही
     const current = this.dataService.lastPunchEvent();
@@ -253,15 +247,7 @@ export class CanteenManagerDashboardComponent {
 
     try {
       if (type === 'redeemed') {
-        this.audioRedeemed.currentTime = 0;
-        this.audioRedeemed.play();
-      } else if (type === 'not_available') {
-        this.audioNotAvailable.currentTime = 0;
-        this.audioNotAvailable.play();
-      } else if (type === 'already_redeemed') {
-        this.audioAlreadyRedeemed.currentTime = 0;
-        this.audioAlreadyRedeemed.play();
-      }
+            }
     } catch {
       // ignore autoplay error
     }
@@ -280,8 +266,5 @@ export class CanteenManagerDashboardComponent {
   }
 
   private stopAllSounds() {
-    this.audioRedeemed.pause();
-    this.audioNotAvailable.pause();
-    this.audioAlreadyRedeemed.pause();
-  }
+    }
 }

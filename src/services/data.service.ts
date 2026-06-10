@@ -1672,6 +1672,82 @@ else {
       };
     }
   }
+  getEmployeeCouponSummary(
+    qrText: string
+  ) {
+  
+    let employee: Employee | undefined;
+  
+    if (qrText.startsWith('EMP:')) {
+  
+      const employeeId =
+        Number(
+          qrText.replace('EMP:', '').trim()
+        );
+  
+      employee =
+        this._employees().find(
+          e => e.id === employeeId
+        );
+  
+    } else {
+  
+      employee =
+        this._employees().find(
+          e => e.assignedQrCard === qrText
+        );
+  
+    }
+  
+    if (!employee) {
+      return null;
+    }
+  
+    const available =
+      this._coupons().filter(
+        c =>
+          c.employeeId === employee.id &&
+          c.status === 'issued'
+      );
+  
+    const redeemed =
+      this._coupons().filter(
+        c =>
+          c.employeeId === employee.id &&
+          c.status === 'redeemed'
+      );
+  
+    return {
+  
+      employeeName:
+        employee.name,
+  
+      employeeId:
+        employee.employeeId,
+  
+      breakfast:
+        available.filter(
+          c =>
+            c.couponType ===
+            'Breakfast'
+        ).length,
+  
+      lunchDinner:
+        available.filter(
+          c =>
+            c.couponType ===
+            'Lunch/Dinner'
+        ).length,
+  
+      totalAvailable:
+        available.length,
+  
+      totalRedeemed:
+        redeemed.length
+  
+    };
+  
+  }
   removeLastCouponBatch(
     employeeId: number
   ): { success: boolean; message: string; removedCount: number } {

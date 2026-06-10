@@ -29,6 +29,9 @@ type AlertType = 'redeemed' | 'not_available' | 'already_redeemed';
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
 })
 export class RedeemCouponComponent implements OnDestroy {
+  couponCheckMode = signal(false);
+
+employeeCouponInfo = signal<any>(null);
   requestFilter =
   signal<'all' | 'pending' | 'completed'>(
     'all'
@@ -205,7 +208,19 @@ pendingMealType = signal('');
     setTimeout(() => this.redeemStatusMessage.set(null), 7000);
   }
   async handlePermanentQr(qrText: string) {
+    if (this.couponCheckMode()) {
 
+      const data =
+        this.dataService.getEmployeeCouponSummary(
+          qrText
+        );
+    
+      this.employeeCouponInfo.set(data);
+    
+      this.hideScanner();
+    
+      return;
+    }
     this.hideScanner();
   
     try {
