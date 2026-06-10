@@ -1,4 +1,3 @@
-import "./chunk-YNJUEIM3.js";
 import {
   FirebaseApp,
   FirebaseApps,
@@ -7,39 +6,8 @@ import {
   ɵgetAllInstancesOf,
   ɵgetDefaultInstanceOf,
   ɵzoneWrap
-} from "./chunk-O7S6SMIJ.js";
+} from "./chunk-TZQ24EAA.js";
 import "./chunk-ZLCEZSPJ.js";
-import {
-  NgModule,
-  NgZone,
-  Optional,
-  PLATFORM_ID,
-  setClassMetadata,
-  ɵɵdefineNgModule
-} from "./chunk-5ZEELAGI.js";
-import {
-  InjectionToken,
-  Injector,
-  makeEnvironmentProviders,
-  ɵɵdefineInjector
-} from "./chunk-WYBNGBD4.js";
-import {
-  Observable,
-  __rest,
-  concatMap,
-  distinct,
-  distinctUntilChanged,
-  filter,
-  from,
-  map,
-  of,
-  pairwise,
-  pipe,
-  scan,
-  startWith,
-  switchMap,
-  timer
-} from "./chunk-4OMQZ6HS.js";
 import {
   AbstractUserDataWriter,
   AggregateField,
@@ -196,6 +164,38 @@ import {
   registerVersion,
   updateEmulatorBanner
 } from "./chunk-G4EQ7ZQB.js";
+import "./chunk-YNJUEIM3.js";
+import {
+  NgModule,
+  NgZone,
+  Optional,
+  PLATFORM_ID,
+  setClassMetadata,
+  ɵɵdefineNgModule
+} from "./chunk-5ZEELAGI.js";
+import {
+  InjectionToken,
+  Injector,
+  makeEnvironmentProviders,
+  ɵɵdefineInjector
+} from "./chunk-WYBNGBD4.js";
+import {
+  Observable,
+  __rest,
+  concatMap,
+  distinct,
+  distinctUntilChanged,
+  filter,
+  from,
+  map,
+  of,
+  pairwise,
+  pipe,
+  scan,
+  startWith,
+  switchMap,
+  timer
+} from "./chunk-4OMQZ6HS.js";
 import "./chunk-46DXP6YY.js";
 
 // node_modules/@firebase/app-check/dist/esm/index.esm2017.js

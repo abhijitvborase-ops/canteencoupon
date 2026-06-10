@@ -7,6 +7,7 @@ export interface Employee {
   password: string;
   role: 'admin' | 'contractual employee' | 'employee' | 'canteen manager';
   department?: string;
+  employeeCategory?: 'Staff' | 'Technician';
   status: 'active' | 'deactivated';
   contractor?: string;
   permanentQrCode?: string;

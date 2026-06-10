@@ -20,6 +20,7 @@ import { Employee } from '../../models/user.model';
 import { AuthService } from '../../services/auth.service';
 import { Contractor } from '../../models/contractor.model';
 import { GuestCouponRequest } from '../../models/guest-coupon-request.model';
+import * as XLSX from 'xlsx';
 
 // Declare jsPDF global to use the library from the script tag
 declare var jspdf: any;
@@ -66,6 +67,11 @@ export class ManageCouponsComponent {
   generateCouponError = signal<string | null>(null);
   isManageEmployeeCouponsModalOpen = signal(false);
   selectedEmployeeForCouponMgmt = signal<Employee | null>(null);
+  isManageContractorCouponsModalOpen =
+  signal(false);
+
+selectedContractorForCouponMgmt =
+  signal<Contractor | null>(null);
   isRemoveLastBatchModalOpen = signal(false);
 
   searchTerm = signal('');
@@ -90,11 +96,7 @@ export class ManageCouponsComponent {
     couponType: new FormControl<Coupon['couponType'] | null>(null, [
       Validators.required,
     ]),
-    quantity: new FormControl(1, [
-      Validators.required,
-      Validators.min(1),
-      Validators.max(500),
-    ]),
+    quantity: new FormControl(25),
   });
 
   // --- Guest Requests Tab State ---
@@ -102,6 +104,8 @@ export class ManageCouponsComponent {
 
   // --- Shared State ---
   isExportMenuOpen = signal(false);
+  exportFromDate = signal('');
+  exportToDate = signal('');
   statusMessage = signal<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
@@ -215,28 +219,63 @@ export class ManageCouponsComponent {
           new Date(a.dateIssued).getTime() - new Date(b.dateIssued).getTime()
       );
   });
+  contractorUnredeemedCoupons =
+  computed(() => {
 
+    const contractor =
+      this.selectedContractorForCouponMgmt();
+
+    if (!contractor) {
+      return [];
+    }
+
+    return this.dataService
+      .coupons()
+      .filter(
+        c =>
+          c.contractorId === contractor.id &&
+          c.status === 'issued'
+      );
+
+  });
   lastBatchInfo = computed(() => {
-    const coupons = this.employeeUnredeemedCoupons();
-    if (coupons.length === 0) return null;
 
+    const contractor =
+      this.selectedContractorForCouponMgmt();
+  
+    const coupons = contractor
+      ? this.contractorUnredeemedCoupons()
+      : this.employeeUnredeemedCoupons();
+  
+    if (coupons.length === 0) {
+      return null;
+    }
+  
     let mostRecentDate = '';
+  
     coupons.forEach((coupon) => {
+  
       if (coupon.dateIssued > mostRecentDate) {
         mostRecentDate = coupon.dateIssued;
       }
+  
     });
-
-    const lastBatchCoupons = coupons.filter(
-      (c) => c.dateIssued === mostRecentDate
-    );
-    if (lastBatchCoupons.length === 0) return null;
-
+  
+    const lastBatchCoupons =
+      coupons.filter(
+        c => c.dateIssued === mostRecentDate
+      );
+  
+    if (lastBatchCoupons.length === 0) {
+      return null;
+    }
+  
     return {
       count: lastBatchCoupons.length,
       dateIssued: mostRecentDate,
       couponType: lastBatchCoupons[0].couponType,
     };
+  
   });
 
   // --- Computed Values for Contractors Tab ---
@@ -357,13 +396,25 @@ export class ManageCouponsComponent {
     this.selectedEmployeeForCouponMgmt.set(employee);
     this.isManageEmployeeCouponsModalOpen.set(true);
   }
+  openManageContractorCouponsModal(
+    contractor: Contractor
+  ) {
+  
+    this.selectedContractorForCouponMgmt.set(
+      contractor
+    );
+  
+    this.isManageContractorCouponsModalOpen.set(
+      true
+    );
+  
+  }
 
   openGenerateContractorCouponsModal(contractor: Contractor) {
     this.selectedContractor.set(contractor);
     this.isGenerateContractorCouponsModalOpen.set(true);
     this.generateContractorCouponsForm.reset({
-      couponType: null,
-      quantity: 1,
+      quantity: 25,
     });
     this.generateContractorCouponError.set(null);
   }
@@ -383,6 +434,9 @@ export class ManageCouponsComponent {
 
     this.isManageEmployeeCouponsModalOpen.set(false);
     this.selectedEmployeeForCouponMgmt.set(null);
+
+    this.isManageContractorCouponsModalOpen.set(false);
+    this.selectedContractorForCouponMgmt.set(null);
 
     this.isRemoveLastBatchModalOpen.set(false);
   }
@@ -408,7 +462,9 @@ export class ManageCouponsComponent {
   handleGenerateContractorCoupons() {
     this.generateContractorCouponError.set(null);
     if (this.generateContractorCouponsForm.valid && this.selectedContractor()) {
-      const { couponType, quantity } = this.generateContractorCouponsForm.value;
+      const { couponType } =
+  this.generateContractorCouponsForm.value;
+  const quantity = 25;
       const result = this.dataService.generateCouponsForContractor(
         this.selectedContractor()!.id,
         couponType!,
@@ -441,23 +497,90 @@ export class ManageCouponsComponent {
   }
 
   handleRemoveLastBatch() {
-    const employee = this.selectedEmployeeForCouponMgmt();
-    if (!employee) return;
 
-    const result = this.dataService.removeLastCouponBatch(employee.id);
-    this.isRemoveLastBatchModalOpen.set(false);
-
-    if (result.success) {
-      this.statusMessage.set({ type: 'success', text: result.message });
-      if (this.employeeUnredeemedCoupons().length === 0) {
-        this.isManageEmployeeCouponsModalOpen.set(false);
-        this.selectedEmployeeForCouponMgmt.set(null);
+    const contractor =
+      this.selectedContractorForCouponMgmt();
+  
+    if (contractor) {
+  
+      const result =
+        this.dataService.removeLastContractorCouponBatch(
+          contractor.id
+        );
+  
+      this.isRemoveLastBatchModalOpen.set(false);
+  
+      if (result.success) {
+  
+        this.statusMessage.set({
+          type: 'success',
+          text: result.message
+        });
+  
+      } else {
+  
+        this.statusMessage.set({
+          type: 'error',
+          text: result.message
+        });
+  
       }
-    } else {
-      this.statusMessage.set({ type: 'error', text: result.message });
+  
+      setTimeout(
+        () => this.statusMessage.set(null),
+        7000
+      );
+  
+      return;
     }
-
-    setTimeout(() => this.statusMessage.set(null), 7000);
+  
+    const employee =
+      this.selectedEmployeeForCouponMgmt();
+  
+    if (!employee) return;
+  
+    const result =
+      this.dataService.removeLastCouponBatch(
+        employee.id
+      );
+  
+    this.isRemoveLastBatchModalOpen.set(false);
+  
+    if (result.success) {
+  
+      this.statusMessage.set({
+        type: 'success',
+        text: result.message
+      });
+  
+      if (
+        this.employeeUnredeemedCoupons().length === 0
+      ) {
+  
+        this.isManageEmployeeCouponsModalOpen.set(
+          false
+        );
+  
+        this.selectedEmployeeForCouponMgmt.set(
+          null
+        );
+  
+      }
+  
+    } else {
+  
+      this.statusMessage.set({
+        type: 'error',
+        text: result.message
+      });
+  
+    }
+  
+    setTimeout(
+      () => this.statusMessage.set(null),
+      7000
+    );
+  
   }
 
   updateSearch(event: Event) {
@@ -639,7 +762,263 @@ export class ManageCouponsComponent {
       'text/csv;charset=utf-8;'
     );
   }
+  exportBillingReportCsv() {
 
+    const fromDate = this.exportFromDate();
+    const toDate = this.exportToDate();
+  
+    if (!fromDate || !toDate) {
+  
+      this.statusMessage.set({
+        type: 'error',
+        text: 'Please select From Date and To Date.'
+      });
+  
+      return;
+    }
+  
+    const headers = [
+      'Employee Name',
+      'Employee ID',
+      'Coupon Type',
+      'Issue Date',
+      'Quantity'
+    ];
+  
+    let csvContent =
+
+  'HYVA INDIA - CANTEEN BILLING REPORT\n' +
+
+  `Report Period: ${fromDate} To ${toDate}\n` +
+
+  `Generated On: ${new Date().toLocaleString()}\n\n` +
+
+  headers.join(',') +
+
+  '\n';
+  
+    const employees =
+      this.dataService.employees();
+  
+    const employeeMap =
+      new Map(
+        employees.map(e => [e.id, e])
+      );
+  
+    const coupons =
+      this.dataService.coupons();
+  
+    const filteredCoupons =
+      coupons.filter(c => {
+  
+        const issueDate =
+          c.dateIssued?.split('T')[0];
+  
+        return (
+          issueDate >= fromDate &&
+          issueDate <= toDate
+        );
+  
+      });
+  
+      const grouped = new Map<string, any>();
+
+      filteredCoupons.forEach(coupon => {
+      
+        const employee =
+          employeeMap.get(coupon.employeeId);
+      
+        const issueDate =
+          coupon.dateIssued.split('T')[0];
+      
+        const key =
+          `${employee?.employeeId}-${coupon.couponType}-${issueDate}`;
+      
+        if (!grouped.has(key)) {
+      
+          grouped.set(key, {
+            employeeName: employee?.name || '',
+            employeeId: employee?.employeeId || '',
+            couponType: coupon.couponType,
+            issueDate,
+            quantity: 0
+          });
+      
+        }
+      
+        grouped.get(key).quantity++;
+      
+      });
+      
+      grouped.forEach(rowData => {
+      
+        const row = [
+      
+          `"${rowData.employeeName}"`,
+      
+          rowData.employeeId,
+      
+          rowData.couponType,
+      
+          rowData.issueDate,
+      
+          rowData.quantity
+      
+        ].join(',');
+      
+        csvContent += row + '\n';
+      
+      });  
+  
+    this.downloadFile(
+      csvContent,
+      `billing_report_${fromDate}_to_${toDate}.csv`,
+      'text/csv;charset=utf-8;'
+    );
+  
+  }
+  exportBillingReportExcel() {
+
+    const fromDate = this.exportFromDate();
+    const toDate = this.exportToDate();
+  
+    if (!fromDate || !toDate) {
+  
+      this.statusMessage.set({
+        type: 'error',
+        text: 'Please select From Date and To Date.'
+      });
+  
+      return;
+    }
+  
+    const employees =
+      this.dataService.employees();
+  
+    const employeeMap =
+      new Map(
+        employees.map(e => [e.id, e])
+      );
+  
+    const coupons =
+      this.dataService.coupons();
+  
+    const filteredCoupons =
+      coupons.filter(c => {
+  
+        const issueDate =
+          c.dateIssued.split('T')[0];
+  
+        return (
+          issueDate >= fromDate &&
+          issueDate <= toDate
+        );
+  
+      });
+  
+    const grouped =
+      new Map<string, any>();
+  
+    filteredCoupons.forEach(coupon => {
+  
+      const employee =
+        employeeMap.get(coupon.employeeId);
+  
+      const issueDate =
+        coupon.dateIssued.split('T')[0];
+  
+      const key =
+        `${employee?.employeeId}-${coupon.couponType}-${issueDate}`;
+  
+      if (!grouped.has(key)) {
+  
+        grouped.set(key, {
+          employeeName: employee?.name || '',
+          employeeId: employee?.employeeId || '',
+          couponType: coupon.couponType,
+          issueDate,
+          quantity: 0
+        });
+  
+      }
+  
+      grouped.get(key).quantity++;
+  
+    });
+  
+    const rows: any[] = [];
+  
+    grouped.forEach(row => {
+  
+      rows.push([
+        row.employeeName,
+        row.employeeId,
+        row.couponType,
+        row.issueDate,
+        row.quantity
+      ]);
+  
+    });
+  
+    const ws =
+      XLSX.utils.aoa_to_sheet([
+        ['HYVA INDIA - CANTEEN BILLING REPORT'],
+        [`Report Period: ${fromDate} To ${toDate}`],
+        [`Generated On: ${new Date().toLocaleString()}`],
+        [],
+        [
+          'Employee Name',
+          'Employee ID',
+          'Coupon Type',
+          'Issue Date',
+          'Quantity'
+        ]
+      ]);
+  
+    XLSX.utils.sheet_add_aoa(
+      ws,
+      rows,
+      { origin: 'A6' }
+    );
+  
+    ws['!merges'] = [
+      {
+        s: { r: 0, c: 0 },
+        e: { r: 0, c: 4 }
+      },
+      {
+        s: { r: 1, c: 0 },
+        e: { r: 1, c: 4 }
+      },
+      {
+        s: { r: 2, c: 0 },
+        e: { r: 2, c: 4 }
+      }
+    ];
+  
+    ws['!cols'] = [
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 10 }
+    ];
+  
+    const wb =
+      XLSX.utils.book_new();
+  
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      'Billing Report'
+    );
+  
+    XLSX.writeFile(
+      wb,
+      `billing_report_${fromDate}_to_${toDate}.xlsx`
+    );
+  
+  }
   exportCouponsPdf() {
     const doc = new jspdf.jsPDF({ orientation: 'landscape' });
     const employeesToExport = this.filteredAndSortedEmployees();

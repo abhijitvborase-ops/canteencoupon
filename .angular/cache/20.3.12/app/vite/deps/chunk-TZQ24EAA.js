@@ -2,6 +2,16 @@ import {
   pendingUntilEvent
 } from "./chunk-ZLCEZSPJ.js";
 import {
+  deleteApp,
+  getApp,
+  getApps,
+  initializeApp,
+  initializeServerApp,
+  onLog,
+  registerVersion,
+  setLogLevel
+} from "./chunk-G4EQ7ZQB.js";
+import {
   Inject,
   Injectable,
   NgModule,
@@ -37,16 +47,6 @@ import {
   subscribeOn,
   timer
 } from "./chunk-4OMQZ6HS.js";
-import {
-  deleteApp,
-  getApp,
-  getApps,
-  initializeApp,
-  initializeServerApp,
-  onLog,
-  registerVersion,
-  setLogLevel
-} from "./chunk-G4EQ7ZQB.js";
 
 // node_modules/firebase/app/dist/esm/index.esm.js
 var name = "firebase";
@@ -354,4 +354,4 @@ firebase/app/dist/esm/index.esm.js:
    * limitations under the License.
    *)
 */
-//# sourceMappingURL=chunk-O7S6SMIJ.js.map
+//# sourceMappingURL=chunk-TZQ24EAA.js.map

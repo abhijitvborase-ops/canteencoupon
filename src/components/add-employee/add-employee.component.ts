@@ -44,6 +44,10 @@ export class AddEmployeeComponent {
     employeeId: new FormControl('', [Validators.required]),
     password: new FormControl('', [Validators.required, Validators.minLength(6)]),
     department: new FormControl('', [Validators.required]),
+    employeeCategory:
+  new FormControl<'Staff' | 'Technician'>(
+    'Staff'
+  ),
     role: new FormControl<Employee['role']>('employee', [Validators.required]),
     contractor: new FormControl(''),
     qrMode: new FormControl('auto'),
@@ -133,6 +137,10 @@ export class AddEmployeeComponent {
       }
       if (formValue.role === 'employee') {
         employeeData.department = formValue.department!;
+      
+        employeeData.employeeCategory =
+          formValue.employeeCategory as
+            'Staff' | 'Technician';
       }
       if (formValue.role === 'contractual employee') {
         employeeData.contractor = formValue.contractor!;

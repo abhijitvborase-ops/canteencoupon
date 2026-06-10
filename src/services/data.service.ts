@@ -1040,14 +1040,27 @@ return newEmployee;
     }
 
     // Determine the monthly limit based on role and coupon type
-    let limit = 0;
-    if (couponType === 'Lunch/Dinner') {
-      if (employee.role === 'employee') limit = 24;
-    } else if (couponType === 'Breakfast') {
-      if (employee.role === 'employee') {
-        limit = 26;
-      }
-    }
+    // Determine the monthly limit based on role and coupon type
+let limit = 0;
+
+if (
+  couponType === 'Lunch/Dinner' ||
+  couponType === 'Breakfast'
+) {
+
+  // Technician = 25
+  if (
+    employee.employeeCategory === 'Technician'
+  ) {
+    limit = 25;
+  }
+
+  // Staff = 24
+  else {
+    limit = 24;
+  }
+
+}
 
     if (limit === 0) {
       return {
@@ -1808,7 +1821,75 @@ else {
       };
     }
   }
-
+  removeLastContractorCouponBatch(
+    contractorId: number
+  ): { success: boolean; message: string; removedCount: number } {
+  
+    const allCoupons = this._coupons();
+  
+    const contractorUnredeemedCoupons =
+      allCoupons.filter(
+        (c) =>
+          c.contractorId === contractorId &&
+          c.status === 'issued'
+      );
+  
+    if (contractorUnredeemedCoupons.length === 0) {
+      return {
+        success: false,
+        message: 'No contractor coupons found.',
+        removedCount: 0,
+      };
+    }
+  
+    let mostRecentDate = '';
+  
+    contractorUnredeemedCoupons.forEach((coupon) => {
+      if (coupon.dateIssued > mostRecentDate) {
+        mostRecentDate = coupon.dateIssued;
+      }
+    });
+  
+    const couponsBeforeLength =
+      allCoupons.length;
+  
+    const couponsAfter =
+      allCoupons.filter((coupon) => {
+  
+        const isFromLastBatch =
+          coupon.contractorId === contractorId &&
+          coupon.status === 'issued' &&
+          coupon.dateIssued === mostRecentDate;
+  
+        return !isFromLastBatch;
+  
+      });
+  
+    const removedCount =
+      couponsBeforeLength -
+      couponsAfter.length;
+  
+    if (removedCount > 0) {
+  
+      this._coupons.set(couponsAfter);
+  
+      this.syncAllCouponsToFirestore();
+  
+      return {
+        success: true,
+        message: `Successfully removed the last batch of ${removedCount} contractor coupon(s).`,
+        removedCount,
+      };
+  
+    }
+  
+    return {
+      success: false,
+      message: 'No coupons were removed.',
+      removedCount: 0,
+    };
+  
+  }
   // ✅ NEW FLOW:
   // Employee → Guest Pass Request (with guestName & guestCompany)
   generateGuestPassFromEmployeeCoupon(
