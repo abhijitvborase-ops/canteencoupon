@@ -12,22 +12,22 @@
     }
   <!-- Employee Management Section -->
   <div id="employees" class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-    <div class="p-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-      <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Employee Management</h2>
-      <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+    <div class="p-6 flex flex-col gap-4">
+      <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Employee Management</h2>
+      <div class="flex flex-wrap items-center gap-2">
         <button
   (click)="downloadSelectedQrPdf()"
-  class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+  class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap">
   Generate QR PDF
 </button>
 <button
   (click)="openQrPoolModal()"
-  class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700">
+  class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 whitespace-nowrap">
   Generate QR Pool
 </button>
 <button
   (click)="showQrPool.set(!showQrPool())"
-  class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700">
+  class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 whitespace-nowrap">
   QR Pool List
 </button>
         <a routerLink="/admin/add-employee" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-center">
@@ -186,7 +186,9 @@
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Status
             </th>
-            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -198,16 +200,16 @@
                   (change)="toggleEmployee(employee.id)"
                 >
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-3 py-4">
                 <div class="text-sm font-medium text-gray-900 dark:text-white">{{ employee.name }}</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">ID: {{ employee.employeeId }}</div>
                 @if (employee.email) {
                   <div class="text-sm text-gray-500 dark:text-gray-400">{{ employee.email }}</div>
                 }
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ employee.department || 'N/A' }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ employee.contractor || 'N/A' }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ employee.department || 'N/A' }}</td>
+              <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ employee.contractor || 'N/A' }}</td>
+              <td class="px-3 py-4 whitespace-nowrap">
                 <span [class]="employee.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'"
                       class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize">
                   {{ employee.role }}
@@ -219,7 +221,8 @@
                   {{ employee.status }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+              <td class="px-3 py-4 text-sm font-medium">
+                <div class="flex flex-col items-center justify-center gap-1 min-w-[90px]">
                 @if(employee.role !== 'admin') {
                   <button (click)="openEditModal(employee)" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-200 font-semibold px-2 py-1">Edit</button>
                   @if(employee.status === 'active') {
@@ -229,6 +232,7 @@
                   }
                   <button (click)="openDeleteModal(employee)" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 font-semibold px-2 py-1">Delete</button>
                 }
+              </div>
               </td>
             </tr>
           }
