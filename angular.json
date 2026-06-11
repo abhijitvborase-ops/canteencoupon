@@ -29,7 +29,8 @@
 
             "styles": [
               "src/style.css"
-            ]
+            ],
+             "baseHref": "/"
           },
           "configurations": {
             "production": {
