@@ -23,7 +23,7 @@
      <div class="p-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Manage Coupons</h2>
        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-         @if (activeTab() === 'employees') {
+         
           <div class="flex gap-2 flex-wrap">
 
             <input
@@ -53,7 +53,7 @@
              @if (isExportMenuOpen()) {
                <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-10" role="menu" aria-orientation="vertical">
                  <div class="py-1" role="none">
-                  
+                  @if(activeTab() === 'employees') {
                    <a (click)="exportCouponsPdf(); isExportMenuOpen.set(false)" class="text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer" role="menuitem">Export Coupon Data (PDF)</a>
                    <a
   (click)="exportBillingReportExcel(); isExportMenuOpen.set(false)"
@@ -62,11 +62,34 @@
 >
   Export Billing Report (Excel)
 </a>
-                 </div>
+}
+@if(activeTab() === 'contractors') {
+
+  <a
+    (click)="exportContractorReportExcel(); isExportMenuOpen.set(false)"
+    class="text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+    role="menuitem">
+    Export Contractor Report (Excel)
+  </a>
+
+}
+
+@if(activeTab() === 'guest') {
+
+  <a
+    (click)="exportGuestPassReportExcel(); isExportMenuOpen.set(false)"
+    class="text-gray-700 dark:text-gray-200 block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+    role="menuitem">
+    Export Guest Pass Report (Excel)
+  </a>
+
+}
+
+</div>
                </div>
              }
            </div>
-         }
+         
        </div>
      </div>
  
@@ -151,9 +174,10 @@
          </div>
        </div>
      }
- 
+     
      <!-- CONTRACTORS TAB CONTENT -->
      @if (activeTab() === 'contractors') {
+      
        <div class="overflow-x-auto">
          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
            <thead class="bg-gray-50 dark:bg-gray-700">
@@ -207,9 +231,10 @@
          </table>
        </div>
      }
- 
+     
      <!-- GUEST PASS REQUESTS TAB CONTENT -->
      @if (activeTab() === 'guest') {
+      
        <div>
          <div class="p-6 border-t border-gray-200 dark:border-gray-700 space-y-2">
            <p class="text-sm text-gray-600 dark:text-gray-400">

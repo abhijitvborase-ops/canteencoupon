@@ -1019,6 +1019,188 @@ selectedContractorForCouponMgmt =
     );
   
   }
+  exportContractorReportExcel() {
+
+    const fromDate = this.exportFromDate();
+    const toDate = this.exportToDate();
+    if (!fromDate || !toDate) {
+
+      this.statusMessage.set({
+        type: 'error',
+        text: 'Please select From Date and To Date.'
+      });
+    
+      return;
+    }
+  
+    const contractors = this.dataService.contractors();
+    const contractorMap = new Map(
+      contractors.map(c => [c.id, c])
+    );
+  
+    const coupons = this.dataService.coupons();
+  
+    const grouped = new Map<string, any>();
+
+coupons
+  .filter(c =>
+    c.contractorId &&
+    c.dateIssued.split('T')[0] >= fromDate &&
+    c.dateIssued.split('T')[0] <= toDate
+  )
+  .forEach(c => {
+
+    const contractor =
+      contractorMap.get(c.contractorId);
+
+    const issueDate =
+      c.dateIssued.split('T')[0];
+
+    const key =
+      `${contractor?.name}-${c.couponType}-${issueDate}`;
+
+    if (!grouped.has(key)) {
+
+      grouped.set(key, {
+        contractorName: contractor?.name || '',
+        couponType: c.couponType,
+        issueDate,
+        quantity: 0
+      });
+
+    }
+
+    grouped.get(key).quantity++;
+
+  });
+
+const rows: any[] = [];
+
+grouped.forEach(row => {
+
+  rows.push([
+    row.contractorName,
+    row.couponType,
+    row.issueDate,
+    row.quantity
+  ]);
+
+});
+  
+const ws = XLSX.utils.aoa_to_sheet([
+  ['HYVA INDIA - CONTRACTOR REPORT'],
+  [`Report Period: ${fromDate} To ${toDate}`],
+  [`Generated On: ${new Date().toLocaleString()}`],
+  [],
+  [
+    'Contractor Name',
+    'Coupon Type',
+    'Issue Date',
+    'Quantity'
+  ],
+  ...rows
+]);
+
+ws['!merges'] = [
+  { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+  { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+  { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } }
+];
+  
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Contractor Report');
+  
+    XLSX.writeFile(
+      wb,
+      `contractor_report_${fromDate}_to_${toDate}.xlsx`
+    );
+  }
+  exportGuestPassReportExcel() {
+    const fromDate = this.exportFromDate();
+    const toDate = this.exportToDate();
+    
+    if (!fromDate || !toDate) {
+    
+      this.statusMessage.set({
+        type: 'error',
+        text: 'Please select From Date and To Date.'
+      });
+    
+      return;
+    }
+    const rows =
+      this.dataService.guestCouponRequests().map(r => [
+  
+        r.employeeName,
+  
+        r.guestName,
+  
+        r.guestCompany,
+  
+        r.couponType,
+  
+        r.status,
+  
+        r.requestDate.split('T')[0],
+  
+        r.decisionDate
+          ? r.decisionDate.split('T')[0]
+          : ''
+  
+      ]);
+  
+      const ws = XLSX.utils.aoa_to_sheet([
+
+        ['HYVA INDIA - GUEST PASS REPORT'],
+        [`Report Period: ${fromDate} To ${toDate}`],
+        [`Generated On: ${new Date().toLocaleString()}`],
+        [],
+      
+        [
+          'Employee Name',
+          'Guest Name',
+          'Guest Company',
+          'Coupon Type',
+          'Status',
+          'Request Date',
+          'Decision Date'
+        ],
+      
+        ...rows
+      
+      ]);
+      
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }
+      ];
+  
+    ws['!cols'] = [
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 }
+    ];
+  
+    const wb = XLSX.utils.book_new();
+  
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      'Guest Pass Report'
+    );
+  
+    XLSX.writeFile(
+      wb,
+      `guest_pass_report_${new Date().toISOString().split('T')[0]}.xlsx`
+    );
+  }
+
+  
   exportCouponsPdf() {
     const doc = new jspdf.jsPDF({ orientation: 'landscape' });
     const employeesToExport = this.filteredAndSortedEmployees();
