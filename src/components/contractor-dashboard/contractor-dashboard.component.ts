@@ -6,6 +6,7 @@ import { Employee } from '../../models/user.model';
 import { Contractor } from '../../models/contractor.model';
 import { Coupon } from '../../models/coupon.model';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-contractor-dashboard',
@@ -131,5 +132,123 @@ export class ContractorDashboardComponent {
     this.statusMessage.set({ type: allSuccess ? 'success' : 'error', text: messages.join(' ') });
     this.closeModals();
     setTimeout(() => this.statusMessage.set(null), 5000);
+  }
+  exportUsageReportExcel() {
+
+    const contractor = this.currentContractor();
+    if (!contractor) return;
+  
+    const employeeMap = new Map(
+      this.dataService.employees().map(e => [e.id, e])
+    );
+  
+    const rows = this.dataService.coupons()
+      .filter(c =>
+        c.contractorId === contractor.id &&
+        c.employeeId
+      )
+      .map(c => {
+  
+        const emp = employeeMap.get(c.employeeId!);
+  
+        return [
+          emp?.name || '',
+          emp?.employeeId || '',
+          c.couponType,
+          c.dateIssued.split('T')[0],
+          c.redeemDate ? c.redeemDate.split('T')[0] : '',
+          c.status
+        ];
+  
+      });
+  
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['CONTRACTOR EMPLOYEE USAGE REPORT'],
+      [],
+      [
+        'Employee Name',
+        'Employee ID',
+        'Coupon Type',
+        'Issue Date',
+        'Redeem Date',
+        'Status'
+      ],
+      ...rows
+    ]);
+  
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Usage Report');
+  
+    XLSX.writeFile(
+      wb,
+      `contractor_usage_report.xlsx`
+    );
+  }
+  exportAllocationReportExcel() {
+
+    const contractor = this.currentContractor();
+    if (!contractor) return;
+  
+    const grouped = new Map<string, any>();
+  
+    this.dataService.coupons()
+      .filter(c => c.contractorId === contractor.id)
+      .forEach(c => {
+  
+        const issueDate =
+          c.dateIssued.split('T')[0];
+  
+        const key =
+          `${issueDate}-${c.couponType}`;
+  
+        if (!grouped.has(key)) {
+  
+          grouped.set(key, {
+            issueDate,
+            couponType: c.couponType,
+            quantity: 0
+          });
+  
+        }
+  
+        grouped.get(key).quantity++;
+  
+      });
+  
+    const rows: any[] = [];
+  
+    grouped.forEach(r => {
+  
+      rows.push([
+        r.issueDate,
+        r.couponType,
+        r.quantity
+      ]);
+  
+    });
+  
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['CONTRACTOR ALLOCATION REPORT'],
+      [],
+      [
+        'Allocation Date',
+        'Coupon Type',
+        'Quantity'
+      ],
+      ...rows
+    ]);
+  
+    const wb = XLSX.utils.book_new();
+  
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      'Allocation Report'
+    );
+  
+    XLSX.writeFile(
+      wb,
+      `contractor_allocation_report.xlsx`
+    );
   }
 }
