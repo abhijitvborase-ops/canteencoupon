@@ -775,19 +775,41 @@ export class DataService {
     // 1️⃣ default: जुना logic (max + 1)
     let newId =
       existing.reduce((maxId, employee) => Math.max(employee.id, maxId), 0) + 1;
-  
+
+      const isAdminUser =
+      employeeData.role === 'admin' ||
+      employeeData.role === 'canteen manager';
+      if (isAdminUser) {
+
+        const adminIds = existing
+        .filter(e =>
+         e.role === 'admin' ||
+         e.role === 'canteen manager'
+        )
+        .map(e => e.id);
+      
+        newId =
+          adminIds.length > 0
+            ? Math.max(...adminIds) + 1
+            : 2;
+      }
+      
+
     // 2️⃣ जर employeeId पूर्णपणे numeric असेल (उदा. "850010")
     const rawEmpCode = (employeeData.employeeId || '').toString().trim();
   
-    if (/^[0-9]+$/.test(rawEmpCode)) {
+    if (
+      !isAdminUser &&
+      /^[0-9]+$/.test(rawEmpCode)
+    ) {
       const numericFromCode = Number(rawEmpCode);
-  
-      // जर हा ID आधीपासून वापरलेला नसेल तर तोच वापर
-      const alreadyUsed = existing.some((e) => e.id === numericFromCode);
+    
+      const alreadyUsed =
+        existing.some((e) => e.id === numericFromCode);
+    
       if (!alreadyUsed) {
         newId = numericFromCode;
       }
-      // जर आधीच वापरलेला असेल तर आपोआप max+1 वापरू (conflict टाळायला)
     }
   
     const newEmployee: Employee = {

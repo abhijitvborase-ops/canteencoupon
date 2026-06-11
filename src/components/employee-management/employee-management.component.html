@@ -37,9 +37,16 @@
         <a routerLink="/admin/add-contract-employee" class="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 text-center">
           Add Contractual Employee
         </a>
-         <a routerLink="/admin/add-admin-canteen" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 text-center">
-          Add Admin/Manager
-        </a>
+        @if(isSuperAdmin()) {
+
+          @if(isSuperAdmin()) {
+            <a routerLink="/admin/add-admin-canteen"
+             class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 text-center">
+            Add Admin/Manager
+          </a>
+        }
+        
+        }
               </div>
     </div>
     @if (showQrPool()) {

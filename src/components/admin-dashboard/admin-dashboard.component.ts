@@ -30,6 +30,13 @@ export class AdminDashboardComponent {
   
   // Filter out the super admin and canteen managers from the employee count
   employees = computed(() => this.dataService.employees().filter(e => e.employeeId !== 'admin01' && e.role !== 'canteen manager'));
+  employeeCount = computed(() =>
+    this.employees().filter(
+      e =>
+        e.role === 'employee' ||
+        e.role === 'contractual employee'
+    ).length
+  );
   allEmployees = this.dataService.employees; // For AI context
   allCoupons = this.dataService.coupons; // For AI context
 
@@ -146,7 +153,14 @@ export class AdminDashboardComponent {
   exportSummaryCsv() {
     const headers = ['Metric', 'Value'];
     const rows = [
-        ['Total Employees', this.employees().length],
+      [
+        'Total Employees',
+        this.employees().filter(
+          e =>
+            e.role === 'employee' ||
+            e.role === 'contractual employee'
+        ).length
+      ],
         ['Today\'s Coupons Issued', this.todaysIssued()],
         ['Today\'s Coupons Redeemed', this.todaysRedeemed()],
         ['Lifetime Coupons Issued', this.lifetimeIssued()],
