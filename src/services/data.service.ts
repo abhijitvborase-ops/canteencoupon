@@ -114,10 +114,51 @@ export class DataService {
       (c) => c.status === 'redeemed' && c.redeemDate?.startsWith(todayStr)
     ).length;
   });
-
+  private saveOfflineCache() {
+    localStorage.setItem(
+      'employees_cache',
+      JSON.stringify(this._employees())
+    );
+  
+    localStorage.setItem(
+      'coupons_cache',
+      JSON.stringify(this._coupons())
+    );
+  
+    localStorage.setItem(
+      'menus_cache',
+      JSON.stringify(this._menus())
+    );
+  }
+  
+  private loadOfflineCache() {
+    try {
+      const employees = localStorage.getItem('employees_cache');
+      const coupons = localStorage.getItem('coupons_cache');
+      const menus = localStorage.getItem('menus_cache');
+  
+      if (employees) {
+        this._employees.set(JSON.parse(employees));
+      }
+  
+      if (coupons) {
+        this._coupons.set(JSON.parse(coupons));
+      }
+  
+      if (menus) {
+        this._menus.set(JSON.parse(menus));
+      }
+  
+      console.log('Offline cache loaded');
+    } catch (e) {
+      console.error('Offline cache error', e);
+    }
+  }
   constructor() {
     // App सुरू झाल्यावर Firestore मधून data load कर
-    this.loadFromFirestore();
+    this.loadOfflineCache(); // आधी local data
+
+    this.loadFromFirestore(); // मग fresh sync
 
     // 👉 Coupons साठी real-time listener
     this.setupRealtimeCouponsListener();
@@ -155,10 +196,7 @@ export class DataService {
     try {
       // Browser offline असेल तर Firestore ला callच करू नको
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        console.warn(
-          'Firestore: browser offline आहे, local seed data वापरत आहे'
-        );
-        this.seedData();
+        console.warn('Offline mode active - cached data loaded');
         return;
       }
 
@@ -250,6 +288,7 @@ export class DataService {
         this._notifications.set(notifications);
         this._guestCouponRequests.set(guestRequests);
         this._pendingMealRequests.set(pendingMealRequests);
+        this.saveOfflineCache();
       }
     } catch (err: any) {
       const msg = String(err?.message ?? '');
