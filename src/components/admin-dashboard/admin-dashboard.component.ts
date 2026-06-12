@@ -172,4 +172,22 @@ export class AdminDashboardComponent {
     });
     this.downloadFile(csvContent, 'hyva_pune_canteen_summary_report.csv', 'text/csv;charset=utf-8;');
   }
+  syncOfflineData() {
+    localStorage.setItem(
+      'employees_cache',
+      JSON.stringify(this.dataService.employees())
+    );
+
+    localStorage.setItem(
+      'contractors_cache',
+      JSON.stringify(this.dataService.contractors())
+    );
+
+    localStorage.setItem(
+      'menus_cache',
+      JSON.stringify(this.dataService.menus())
+    );
+
+    alert('Offline data synced successfully');
+  }
 }
