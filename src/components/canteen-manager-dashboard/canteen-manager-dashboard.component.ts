@@ -264,7 +264,27 @@ export class CanteenManagerDashboardComponent {
     this.alertType.set('none');
     this.stopAllSounds();
   }
+  syncOfflineData() {
+    localStorage.setItem(
+      'employees_cache',
+      JSON.stringify(this.dataService.employees())
+    );
+
+    localStorage.setItem(
+      'contractors_cache',
+      JSON.stringify(this.dataService.contractors())
+    );
+
+    localStorage.setItem(
+      'menus_cache',
+      JSON.stringify(this.dataService.menus())
+    );
+
+    alert('Offline data synced successfully');
+  }
 
   private stopAllSounds() {
-    }
+  }
 }
+
+
