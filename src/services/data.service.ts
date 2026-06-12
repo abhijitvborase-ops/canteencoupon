@@ -165,19 +165,26 @@ export class DataService {
     } catch (e) {
       console.error('Offline cache error', e);
     }
+    console.log(
+      'OFFLINE CACHE RESTORED',
+      this._employees().length,
+      this._coupons().length,
+      this._menus().length
+    );
   }
   constructor() {
     // App सुरू झाल्यावर Firestore मधून data load कर
     this.loadOfflineCache(); // आधी local data
 
     this.loadFromFirestore(); // मग fresh sync
-
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
     // 👉 Coupons साठी real-time listener
     this.setupRealtimeCouponsListener();
     this.setupRealtimeQrCardsListener();
 
     // 👉 Device कडून येणार्‍या punchEvents साठी real-time listener
     this.setupRealtimePunchEventsListener();
+  }
   }
 
   // =========================
@@ -398,6 +405,7 @@ export class DataService {
 
       // 👉 Firestore मध्ये जे आहे तेच "सत्य" मानून local state update
       this._coupons.set(coupons);
+      this.saveOfflineCache();
     });
   }
   private setupRealtimeQrCardsListener() {
@@ -410,6 +418,7 @@ export class DataService {
         );
   
       this._qrCards.set(cards);
+      this.saveOfflineCache();
   
     });
   
