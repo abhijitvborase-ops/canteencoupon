@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           java-version: 21
 
-            - name: Decode Keystore
+      - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/hyva-release.keystore
 
@@ -34,10 +34,10 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease \
-          -Pandroid.injected.signing.store.file=app/hyva-release.keystore \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+            -Pandroid.injected.signing.store.file=app/hyva-release.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
 
       - uses: actions/upload-artifact@v4
         with:
