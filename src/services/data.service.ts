@@ -141,12 +141,7 @@ export class DataService {
     const employees = localStorage.getItem('employees_cache');
 const coupons = localStorage.getItem('coupons_cache');
 const menus = localStorage.getItem('menus_cache');
-alert(
-  'EMP=' +
-  (employees ? JSON.parse(employees).length : 0) +
-  ' COUP=' +
-  (coupons ? JSON.parse(coupons).length : 0)
-);
+
 console.log('CACHE RAW', {
   employeesLength: employees ? JSON.parse(employees).length : 0,
   couponsLength: coupons ? JSON.parse(coupons).length : 0,
