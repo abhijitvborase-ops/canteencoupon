@@ -148,10 +148,7 @@ console.log('CACHE RAW', {
   menusLength: menus ? JSON.parse(menus).length : 0,
 });
     try {
-      const employees = localStorage.getItem('employees_cache');
-      const coupons = localStorage.getItem('coupons_cache');
-      const menus = localStorage.getItem('menus_cache');
-  
+       
       if (employees) {
         this._employees.set(JSON.parse(employees));
       }
