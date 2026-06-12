@@ -36,6 +36,7 @@
     "zone.js": "^0.15.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^24.10.1",
     "autoprefixer": "^10.4.22",
