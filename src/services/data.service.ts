@@ -115,6 +115,12 @@ export class DataService {
     ).length;
   });
   private saveOfflineCache() {
+    console.log(
+      'CACHE SAVED',
+      this._employees().length,
+      this._coupons().length,
+      this._menus().length
+    );
     localStorage.setItem(
       'employees_cache',
       JSON.stringify(this._employees())
@@ -132,6 +138,12 @@ export class DataService {
   }
   
   private loadOfflineCache() {
+    console.log(
+      'CACHE LOADED',
+      this._employees().length,
+      this._coupons().length,
+      this._menus().length
+    );
     try {
       const employees = localStorage.getItem('employees_cache');
       const coupons = localStorage.getItem('coupons_cache');
@@ -298,12 +310,12 @@ export class DataService {
         console.warn(
           'Firestore offline/unavailable, local seed data वापरत आहे'
         );
-        this.seedData();
+        return;
         return;
       }
 
       console.error('Error loading data from Firestore:', err);
-      this.seedData();
+      return;
     }
   }
 
