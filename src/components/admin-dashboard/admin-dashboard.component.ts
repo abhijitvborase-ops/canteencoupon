@@ -30,8 +30,13 @@ export class AdminDashboardComponent {
   
   // Filter out the super admin and canteen managers from the employee count
   employees = computed(() => this.dataService.employees().filter(e => e.employeeId !== 'admin01' && e.role !== 'canteen manager'));
-  employeeCount = computed(() => this.employees().length);
-  
+  employeeCount = computed(() =>
+    this.employees().filter(
+      e =>
+        e.role === 'employee' ||
+        e.role === 'contractual employee'
+    ).length
+  );
   allEmployees = this.dataService.employees; // For AI context
   allCoupons = this.dataService.coupons; // For AI context
 

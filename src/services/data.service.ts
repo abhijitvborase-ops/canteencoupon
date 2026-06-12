@@ -135,12 +135,21 @@ export class DataService {
       'menus_cache',
       JSON.stringify(this._menus())
     );
+    localStorage.setItem(
+      'contractors_cache',
+      JSON.stringify(this._contractors())
+    );
   }
   
   private loadOfflineCache() {
     const employees = localStorage.getItem('employees_cache');
 const coupons = localStorage.getItem('coupons_cache');
 const menus = localStorage.getItem('menus_cache');
+const contractors = localStorage.getItem('contractors_cache');
+
+if (contractors) {
+  this._contractors.set(JSON.parse(contractors));
+}
 
 console.log('CACHE RAW', {
   employeesLength: employees ? JSON.parse(employees).length : 0,
@@ -175,8 +184,9 @@ console.log('CACHE RAW', {
   constructor() {
     // App सुरू झाल्यावर Firestore मधून data load कर
     this.loadOfflineCache(); // आधी local data
-
+ if (navigator.onLine) {
     this.loadFromFirestore(); // मग fresh sync
+    }
     if (typeof navigator !== 'undefined' && navigator.onLine) {
     // 👉 Coupons साठी real-time listener
     this.setupRealtimeCouponsListener();
