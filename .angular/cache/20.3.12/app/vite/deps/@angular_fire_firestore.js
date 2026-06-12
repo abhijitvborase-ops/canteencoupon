@@ -1,14 +1,4 @@
 import {
-  FirebaseApp,
-  FirebaseApps,
-  VERSION,
-  ɵAngularFireSchedulers,
-  ɵgetAllInstancesOf,
-  ɵgetDefaultInstanceOf,
-  ɵzoneWrap
-} from "./chunk-TZQ24EAA.js";
-import "./chunk-ZLCEZSPJ.js";
-import {
   AbstractUserDataWriter,
   AggregateField,
   AggregateQuerySnapshot,
@@ -129,6 +119,15 @@ import {
   writeBatch
 } from "./chunk-X4ZIDR7K.js";
 import {
+  FirebaseApp,
+  FirebaseApps,
+  VERSION,
+  ɵAngularFireSchedulers,
+  ɵgetAllInstancesOf,
+  ɵgetDefaultInstanceOf,
+  ɵzoneWrap
+} from "./chunk-OLB7IHD5.js";
+import {
   Component,
   Deferred,
   ErrorFactory,
@@ -164,6 +163,7 @@ import {
   registerVersion,
   updateEmulatorBanner
 } from "./chunk-G4EQ7ZQB.js";
+import "./chunk-ZLCEZSPJ.js";
 import "./chunk-YNJUEIM3.js";
 import {
   NgModule,

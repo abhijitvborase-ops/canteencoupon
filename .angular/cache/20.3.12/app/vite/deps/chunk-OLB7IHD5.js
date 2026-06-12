@@ -1,7 +1,4 @@
 import {
-  pendingUntilEvent
-} from "./chunk-ZLCEZSPJ.js";
-import {
   deleteApp,
   getApp,
   getApps,
@@ -11,6 +8,9 @@ import {
   registerVersion,
   setLogLevel
 } from "./chunk-G4EQ7ZQB.js";
+import {
+  pendingUntilEvent
+} from "./chunk-ZLCEZSPJ.js";
 import {
   Inject,
   Injectable,
@@ -354,4 +354,4 @@ firebase/app/dist/esm/index.esm.js:
    * limitations under the License.
    *)
 */
-//# sourceMappingURL=chunk-TZQ24EAA.js.map
+//# sourceMappingURL=chunk-OLB7IHD5.js.map
