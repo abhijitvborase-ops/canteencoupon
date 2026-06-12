@@ -110,7 +110,8 @@ pendingMealType = signal('');
     this.isScannerVisible.set(false);
   }
 
-  private startScanner() {
+  private async startScanner() {
+    
     const readerElementId = 'qr-reader-redeem';
     if (!document.getElementById(readerElementId)) {
       this.scannerErrorMessage.set(
@@ -144,8 +145,9 @@ pendingMealType = signal('');
       .start({ facingMode: 'environment' }, config, onScanSuccess, onScanFailure)
       .catch((err: any) => {
         console.error('Unable to start QR scanner', err);
+      
         this.scannerErrorMessage.set(
-          'Could not start scanner. Please check camera permissions.'
+          'Scanner Error: ' + JSON.stringify(err)
         );
       });
   }
